@@ -116,7 +116,7 @@
           <connections>
             <switch id="sw2" pos="0" trackContinueCourse="straight" normalPosition="straight">
               <additionalName name="51" />
-              <connection id="c2-ce10" ref="ce10" orientation="incoming" course="straight" />
+              <connection id="c2-ce10" ref="ce10" orientation="incoming" course="left" />
             </switch>
           </connections>
         </trackTopology>
