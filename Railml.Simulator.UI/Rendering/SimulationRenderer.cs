@@ -53,23 +53,16 @@ namespace Railml.Simulator.UI.Rendering
         {
             foreach (var track in manager.Tracks.Values)
             {
-                // We need ScreenPos. RailModel has ScreenPos in various places.
-                // Or calculate from Topology.
-                // Prorotype: Draw simple line based on some coordinates.
-                // Since I don't have the parsing logic for Geometry here yet, 
-                // I will try to use <screenPos> from RailML or <absPos> mapped linearly.
+                // Use Parsed ScreenPos
+                float x1 = (float)track.StartScreenPos.X;
+                float y1 = (float)track.StartScreenPos.Y;
+                float x2 = (float)track.EndScreenPos.X;
+                float y2 = (float)track.EndScreenPos.Y;
                 
-                // If the track has visualization info (from Model), use it.
-                // The loaded model 'RailModel.cs' has 'ScreenPos' in TrackNode (TrackBegin/TrackEnd).
-                
-                var top = track.RailmlTrack.TrackTopology;
-                if (top?.TrackBegin?.ScreenPos != null && top?.TrackEnd?.ScreenPos != null)
+                // If 0,0 maybe fallback to legacy or skip?
+                // sim.railml has valid coordinates.
+                if (x1 != 0 || y1 != 0 || x2 != 0 || y2 != 0)
                 {
-                    float x1 = (float)top.TrackBegin.ScreenPos.X;
-                    float y1 = (float)top.TrackBegin.ScreenPos.Y;
-                    float x2 = (float)top.TrackEnd.ScreenPos.X;
-                    float y2 = (float)top.TrackEnd.ScreenPos.Y;
-                    
                     canvas.DrawLine(x1, y1, x2, y2, track.IsOccupied ? _trackActivePaint : _trackPaint);
                 }
             }
@@ -83,21 +76,16 @@ namespace Railml.Simulator.UI.Rendering
                 if (track != null)
                 {
                      // interpolated position
-                     // Linear interpolation between Begin and End ScreenPos based on PositionOnTrack/Length
-                     var top = track.RailmlTrack.TrackTopology;
-                     if (top?.TrackBegin?.ScreenPos != null && top?.TrackEnd?.ScreenPos != null)
-                     {
-                        float x1 = (float)top.TrackBegin.ScreenPos.X;
-                        float y1 = (float)top.TrackBegin.ScreenPos.Y;
-                        float x2 = (float)top.TrackEnd.ScreenPos.X;
-                        float y2 = (float)top.TrackEnd.ScreenPos.Y;
+                     float x1 = (float)track.StartScreenPos.X;
+                     float y1 = (float)track.StartScreenPos.Y;
+                     float x2 = (float)track.EndScreenPos.X;
+                     float y2 = (float)track.EndScreenPos.Y;
                         
-                        float t = (float)(train.PositionOnTrack / track.Length);
-                        float cx = x1 + (x2 - x1) * t;
-                        float cy = y1 + (y2 - y1) * t;
+                     float t = (float)(train.PositionOnTrack / track.Length);
+                     float cx = x1 + (x2 - x1) * t;
+                     float cy = y1 + (y2 - y1) * t;
                         
-                        canvas.DrawCircle(cx, cy, 5, _trainPaint);
-                     }
+                     canvas.DrawCircle(cx, cy, 5, _trainPaint);
                 }
             }
         }

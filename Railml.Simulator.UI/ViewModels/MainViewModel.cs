@@ -26,7 +26,7 @@ namespace Railml.Simulator.UI.ViewModels
 
         public void LoadSimulation(Railml.Simulation.Core.Models.Railml model, SimulationSettings settings)
         {
-            _simulationManager = new SimulationManager(model.Infrastructure, settings);
+            _simulationManager = new SimulationManager(model, settings);
             OnPropertyChanged(nameof(SimulationManager));
         }
 

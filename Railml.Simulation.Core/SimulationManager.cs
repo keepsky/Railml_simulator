@@ -11,7 +11,8 @@ namespace Railml.Simulation.Core
     {
         public EventQueue EventQueue { get; } = new EventQueue();
         public SimulationSettings Settings { get; }
-        public Infrastructure Infrastructure { get; }
+        private Models.Railml _model;
+        private Infrastructure _infrastructure => _model.Infrastructure;
 
         public Dictionary<string, SimTrack> Tracks { get; } = new Dictionary<string, SimTrack>();
         public Dictionary<string, SimSwitch> Switches { get; } = new Dictionary<string, SimSwitch>();
@@ -25,9 +26,9 @@ namespace Railml.Simulation.Core
         public event Action<Train> OnTrainRemoved;
         public event Action OnSimulationUpdated;
 
-        public SimulationManager(Infrastructure infrastructure, SimulationSettings settings)
+        public SimulationManager(Models.Railml model, SimulationSettings settings)
         {
-            Infrastructure = infrastructure;
+            _model = model;
             Settings = settings;
             InitializeWorld();
         }
@@ -35,12 +36,12 @@ namespace Railml.Simulation.Core
         private void InitializeWorld()
         {
             // Build SimObjects
-            foreach (var track in Infrastructure.Tracks.TrackList)
+            foreach (var track in _infrastructure.Tracks.TrackList)
             {
                 Tracks[track.Id] = new SimTrack(track);
             }
 
-            foreach (var track in Infrastructure.Tracks.TrackList)
+            foreach (var track in _infrastructure.Tracks.TrackList)
             {
                 // Switches are inside Connections usually, or global?
                 // RailML 2.5: <connections><switch>... or <track><trackTopology><connections><switch>
@@ -66,6 +67,51 @@ namespace Railml.Simulation.Core
                     }
                 }
             }
+
+            // Parse Visualization
+            // Logic: Iterate InfrastructureVisualizations -> LineVis -> TrackVis
+            // Find Track by Ref -> Get SimTrack
+            // Iterate TrackElementVis -> Match Ref to TrackBegin/TrackEnd Id -> Set Point
+            if (_model.InfrastructureVisualizations?.VisualizationList != null)
+            {
+                foreach (var vis in _model.InfrastructureVisualizations.VisualizationList)
+                {
+                    foreach (var lineVis in vis.LineVisList)
+                    {
+                        foreach (var trackVis in lineVis.TrackVisList)
+                        {
+                            if (Tracks.TryGetValue(trackVis.Ref, out var simTrack))
+                            {
+                                foreach (var elementVis in trackVis.TrackElementVisList)
+                                {
+                                    if (elementVis.Ref == simTrack.RailmlTrack.TrackTopology.TrackBegin.Id)
+                                    {
+                                        simTrack.StartScreenPos = new Point(elementVis.Position.X, elementVis.Position.Y);
+                                    }
+                                    else if (elementVis.Ref == simTrack.RailmlTrack.TrackTopology.TrackEnd.Id)
+                                    {
+                                        simTrack.EndScreenPos = new Point(elementVis.Position.X, elementVis.Position.Y);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // ObjectVis for Signals/Switches?
+                    // sim.railml has <objectVis ref="sw1">...
+                    foreach(var objVis in vis.ObjectVisList)
+                    {
+                         // Check Switches
+                         if (Switches.TryGetValue(objVis.Ref, out var simSwitch))
+                         {
+                             // simSwitch.ScreenPos ?
+                             // We probably need to store this in SimSwitch too if we want to render it precisely.
+                         }
+                         // Check Signals ?
+                    }
+                }
+            }
+
         }
 
         public void Start()

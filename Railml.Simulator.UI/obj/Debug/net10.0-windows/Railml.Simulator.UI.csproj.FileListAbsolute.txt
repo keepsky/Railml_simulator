@@ -25,6 +25,7 @@ C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\Railm
 C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\Railml.Simulator.UI.AssemblyInfoInputs.cache
 C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\Railml.Simulator.UI.AssemblyInfo.cs
 C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\Railml.Simulator.UI.csproj.CoreCompileInputs.cache
+C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\Railml.Simulator.UI.sourcelink.json
 C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\Railml.S.28A08236.Up2Date
 C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\Railml.Simulator.UI.dll
 C:\WORK\SRC\Railml_simulator\Railml.Simulator.UI\obj\Debug\net10.0-windows\refint\Railml.Simulator.UI.dll
