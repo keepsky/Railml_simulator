@@ -17,6 +17,8 @@
             <Separator/>
             <Button Content="Start" Click="OnStartClick"/>
             <Button Content="Stop" Click="OnStopClick"/>
+            <Separator/>
+            <Button Content="Settings" Click="OnSettingsClick"/>
         </ToolBar>
 
         <skia:SKElement Name="SkiaCanvas" Grid.Row="1" PaintSurface="OnPaintSurface"/>

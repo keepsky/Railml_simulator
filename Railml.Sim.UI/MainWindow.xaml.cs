@@ -48,8 +48,7 @@ namespace Railml.Sim.UI
                     using (var fs = new FileStream(dlg.FileName, FileMode.Open))
                     {
                         var model = (Railml.Sim.Core.Models.Railml)serializer.Deserialize(fs);
-                        var settings = new SimulationSettings(); // Default settings
-                        _viewModel.LoadSimulation(model, settings);
+                        _viewModel.LoadSimulation(model);
                         StatusText.Text = $"Loaded: {dlg.FileName}";
                         SkiaCanvas.InvalidateVisual();
                     }
@@ -71,6 +70,18 @@ namespace Railml.Sim.UI
         {
             _viewModel.Stop();
             StatusText.Text = "Simulation Stopped";
+        }
+
+        private void OnSettingsClick(object sender, RoutedEventArgs e)
+        {
+            // Edit global settings directly
+            var dlg = new SettingsWindow(_viewModel.CurrentSettings);
+            dlg.Owner = this;
+            if (dlg.ShowDialog() == true)
+            {
+                // Save settings
+                _viewModel.CurrentSettings.Save("settings.json");
+            }
         }
     }
 }

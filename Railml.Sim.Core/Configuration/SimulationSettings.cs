@@ -22,6 +22,31 @@ namespace Railml.Sim.Core
         public double MovementUpdateInterval { get; set; } = 1.0; // seconds
 
         public TrainDirection DefaultDirection { get; set; } = TrainDirection.Up;
+
+        public static SimulationSettings Load(string filePath)
+        {
+            try
+            {
+                if (System.IO.File.Exists(filePath))
+                {
+                    var json = System.IO.File.ReadAllText(filePath);
+                    return System.Text.Json.JsonSerializer.Deserialize<SimulationSettings>(json);
+                }
+            }
+            catch { }
+            return new SimulationSettings();
+        }
+
+        public void Save(string filePath)
+        {
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                var json = System.Text.Json.JsonSerializer.Serialize(this, options);
+                System.IO.File.WriteAllText(filePath, json);
+            }
+            catch { }
+        }
     }
 
     public enum TrainDirection

@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace Railml.Simulator.UI;
+namespace Railml.Sim.UI;
 
 /// <summary>
 /// Interaction logic for App.xaml

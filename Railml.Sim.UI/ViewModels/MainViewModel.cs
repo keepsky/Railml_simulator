@@ -13,20 +13,22 @@ namespace Railml.Sim.UI.ViewModels
         private DispatcherTimer _timer;
 
         public SimulationManager SimulationManager => _simulationManager;
-        public double CurrentTime => _simulationManager.CurrentTime;
+        public double CurrentTime => _simulationManager?.CurrentTime ?? 0.0;
+        public SimulationSettings CurrentSettings { get; set; }
 
         public MainViewModel()
         {
-            // Initialize with dummy or load logic (to be added)
-            // For now, empty or null manager until loaded
+            // Load settings on startup
+            CurrentSettings = SimulationSettings.Load("settings.json");
+
             _timer = new DispatcherTimer();
             _timer.Interval = TimeSpan.FromMilliseconds(33); // ~30 FPS
             _timer.Tick += OnTimerTick;
         }
 
-        public void LoadSimulation(Railml.Sim.Core.Models.Railml model, SimulationSettings settings)
+        public void LoadSimulation(Railml.Sim.Core.Models.Railml model)
         {
-            _simulationManager = new SimulationManager(model, settings);
+            _simulationManager = new SimulationManager(model, CurrentSettings);
             OnPropertyChanged(nameof(SimulationManager));
         }
 
