@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using SkiaSharp;
-using Railml.Simulation.Core;
-using Railml.Simulation.Core.SimObjects;
+using Railml.Sim.Core;
+using Railml.Sim.Core.SimObjects;
 
-namespace Railml.Simulator.UI.Rendering
+namespace Railml.Sim.UI.Rendering
 {
     public class SimulationRenderer
     {

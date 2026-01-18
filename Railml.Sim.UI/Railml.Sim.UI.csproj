@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Railml.Simulation.Core\Railml.Simulation.Core.csproj" />
+    <ProjectReference Include="..\Railml.Sim.Core\Railml.Sim.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

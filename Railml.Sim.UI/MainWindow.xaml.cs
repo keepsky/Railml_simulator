@@ -3,13 +3,13 @@ using System.IO;
 using System.Windows;
 using System.Xml.Serialization;
 using Microsoft.Win32;
-using Railml.Simulation.Core;
-using Railml.Simulation.Core.Models;
-using Railml.Simulator.UI.Rendering;
-using Railml.Simulator.UI.ViewModels;
+using Railml.Sim.Core;
+using Railml.Sim.Core.Models;
+using Railml.Sim.UI.Rendering;
+using Railml.Sim.UI.ViewModels;
 using SkiaSharp.Views.Desktop;
 
-namespace Railml.Simulator.UI
+namespace Railml.Sim.UI
 {
     public partial class MainWindow : Window
     {
@@ -44,10 +44,10 @@ namespace Railml.Simulator.UI
             {
                 try
                 {
-                    var serializer = new XmlSerializer(typeof(Railml.Simulation.Core.Models.Railml));
+                    var serializer = new XmlSerializer(typeof(Railml.Sim.Core.Models.Railml));
                     using (var fs = new FileStream(dlg.FileName, FileMode.Open))
                     {
-                        var model = (Railml.Simulation.Core.Models.Railml)serializer.Deserialize(fs);
+                        var model = (Railml.Sim.Core.Models.Railml)serializer.Deserialize(fs);
                         var settings = new SimulationSettings(); // Default settings
                         _viewModel.LoadSimulation(model, settings);
                         StatusText.Text = $"Loaded: {dlg.FileName}";

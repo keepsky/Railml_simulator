@@ -1,5 +1,5 @@
 build*
-Railml.Simulation.Core/obj/
-Railml.Simulation.Core/bin/
-Railml.Simulator.UI/obj/
-Railml.Simulator.UI/bin/
+Railml.Sim.Core/obj/
+Railml.Sim.Core/bin/
+Railml.Sim.UI/obj/
+Railml.Sim.UI/bin/

@@ -1,6 +1,6 @@
 using System;
 
-namespace Railml.Simulation.Core
+namespace Railml.Sim.Core
 {
     public class SimulationSettings
     {

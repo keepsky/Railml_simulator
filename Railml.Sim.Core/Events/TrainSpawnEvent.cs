@@ -1,6 +1,6 @@
 using System;
 
-namespace Railml.Simulation.Core.Events
+namespace Railml.Sim.Core.Events
 {
     public class TrainSpawnEvent : DESEvent
     {
@@ -10,7 +10,7 @@ namespace Railml.Simulation.Core.Events
         {
             // Create a new train
             var trainId = $"T_{context.CurrentTime:F0}";
-            var train = new Railml.Simulation.Core.SimObjects.Train(trainId, context.Settings);
+            var train = new Railml.Sim.Core.SimObjects.Train(trainId, context.Settings);
 
             // Find start track (Logic to pick a start track? Random or first in list?)
             // User requirement: "trackBegin openEnd point...".

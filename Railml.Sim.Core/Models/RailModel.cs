@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace Railml.Simulation.Core.Models
+namespace Railml.Sim.Core.Models
 {
     // Simplified RailML 2.5 Structure
 

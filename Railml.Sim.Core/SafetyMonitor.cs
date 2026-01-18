@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace Railml.Simulation.Core
+namespace Railml.Sim.Core
 {
     public class SafetyMonitor
     {

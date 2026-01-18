@@ -1,7 +1,7 @@
-using Railml.Simulation.Core.Events;
-using Railml.Simulation.Core.Models;
+using Railml.Sim.Core.Events;
+using Railml.Sim.Core.Models;
 
-namespace Railml.Simulation.Core
+namespace Railml.Sim.Core
 {
     // Forward declaration or Interface to allow Event execution
     public interface SimulationContext

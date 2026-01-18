@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using Railml.Simulation.Core.SimObjects;
+using Railml.Sim.Core.SimObjects;
 
-namespace Railml.Simulation.Core
+namespace Railml.Sim.Core
 {
     public class InterlockingSystem
     {

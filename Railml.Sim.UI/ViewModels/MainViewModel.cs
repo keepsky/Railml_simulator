@@ -2,10 +2,10 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
-using Railml.Simulation.Core;
-using Railml.Simulation.Core.Models;
+using Railml.Sim.Core;
+using Railml.Sim.Core.Models;
 
-namespace Railml.Simulator.UI.ViewModels
+namespace Railml.Sim.UI.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
@@ -24,7 +24,7 @@ namespace Railml.Simulator.UI.ViewModels
             _timer.Tick += OnTimerTick;
         }
 
-        public void LoadSimulation(Railml.Simulation.Core.Models.Railml model, SimulationSettings settings)
+        public void LoadSimulation(Railml.Sim.Core.Models.Railml model, SimulationSettings settings)
         {
             _simulationManager = new SimulationManager(model, settings);
             OnPropertyChanged(nameof(SimulationManager));

@@ -1,6 +1,6 @@
-using Railml.Simulation.Core.Models;
+using Railml.Sim.Core.Models;
 
-namespace Railml.Simulation.Core.SimObjects
+namespace Railml.Sim.Core.SimObjects
 {
     public enum SignalAspect
     {

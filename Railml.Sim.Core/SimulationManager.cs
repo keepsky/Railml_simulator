@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Railml.Simulation.Core.Events;
-using Railml.Simulation.Core.Models;
-using Railml.Simulation.Core.SimObjects;
+using Railml.Sim.Core.Events;
+using Railml.Sim.Core.Models;
+using Railml.Sim.Core.SimObjects;
 
-namespace Railml.Simulation.Core
+namespace Railml.Sim.Core
 {
     public class SimulationManager : SimulationContext
     {

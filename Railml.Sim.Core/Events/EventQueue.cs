@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Railml.Simulation.Core.Events
+namespace Railml.Sim.Core.Events
 {
     public class EventQueue
     {

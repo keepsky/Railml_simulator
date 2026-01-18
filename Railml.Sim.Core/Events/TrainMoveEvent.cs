@@ -1,7 +1,7 @@
 using System;
-using Railml.Simulation.Core.SimObjects;
+using Railml.Sim.Core.SimObjects;
 
-namespace Railml.Simulation.Core.Events
+namespace Railml.Sim.Core.Events
 {
     public class TrainMoveEvent : DESEvent
     {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Railml.Simulation.Core.SimObjects
+namespace Railml.Sim.Core.SimObjects
 {
     public class Train
     {
