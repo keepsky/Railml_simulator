@@ -10,13 +10,15 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("Railml.Simulation.Core")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("Railml.Simulator.UI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2491b8882ed076a1d97bbebe49cc8225c7e1331b")]
-[assembly: System.Reflection.AssemblyProductAttribute("Railml.Simulation.Core")]
-[assembly: System.Reflection.AssemblyTitleAttribute("Railml.Simulation.Core")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+314001690218c44e857f7badbb65d957b5b135bc")]
+[assembly: System.Reflection.AssemblyProductAttribute("Railml.Simulator.UI")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Railml.Simulator.UI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+[assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]
 
 // MSBuild WriteCodeFragment 클래스에서 생성되었습니다.
 
