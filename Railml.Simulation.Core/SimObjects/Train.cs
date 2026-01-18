@@ -1,0 +1,28 @@
+using System;
+
+namespace Railml.Simulation.Core.SimObjects
+{
+    public class Train
+    {
+        public string Id { get; set; }
+        public double Length { get; set; }
+        public double Speed { get; set; } // m/s
+        public double MaxSpeed { get; set; } // m/s (from settings or train type)
+        public double BrakingDeceleration { get; set; } // m/s^2
+
+        // Position State
+        public SimTrack CurrentTrack { get; set; }
+        public double PositionOnTrack { get; set; } // meters from Track Begin
+        public TrainDirection MoveDirection { get; set; } // Up (Pos increasing) or Down (Pos decreasing)
+
+        public Train(string id, SimulationSettings settings)
+        {
+            Id = id;
+            Length = settings.TrainLength;
+            MaxSpeed = settings.DefaultSpeed;
+            BrakingDeceleration = settings.BrakingDeceleration; 
+        }
+
+        // Logic to update position will be handled by Events, but we can have helper methods here.
+    }
+}

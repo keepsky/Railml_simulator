@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<railml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:sehwa="http://www.sehwa.co.kr/railml" version="2.5"
+  xmlns="http://www.railml.org/schemas/2013">
+  <infrastructure id="inf001" name="Default Infrastructure">
+    <tracks>
+      <track id="tr1" name="B100T" mainDir="up" code="plain">
+        <trackTopology>
+          <trackBegin absPos="0" pos="0" id="tb1">
+            <openEnd id="tb1" />
+          </trackBegin>
+          <trackEnd absPos="500" pos="100" id="te1">
+            <connection id="ce1" ref="cb2" />
+          </trackEnd>
+        </trackTopology>
+      </track>
+      <track id="tr2" name="AT" mainDir="up" code="plain">
+        <trackTopology>
+          <trackBegin absPos="500" pos="0" id="tb2">
+            <connection id="cb2" ref="ce1" />
+          </trackBegin>
+          <trackEnd absPos="1000" pos="100" id="te2">
+            <connection id="ce2" ref="cb4" />
+          </trackEnd>
+        </trackTopology>
+        <ocsElements>
+          <signals>
+            <signal id="sig1" dir="up" pos="15">
+              <additionalName name="1A" />
+            </signal>
+          </signals>
+        </ocsElements>
+      </track>
+      <track id="tr3" name="2T" mainDir="up" code="plain">
+        <trackTopology>
+          <trackBegin absPos="1500" pos="0" id="tb3">
+            <connection id="cb3" ref="ce5" />
+          </trackBegin>
+          <trackEnd absPos="2300" pos="260" id="te3">
+            <connection id="ce3" ref="cb8" />
+          </trackEnd>
+        </trackTopology>
+      </track>
+      <track id="tr4" name="21T" mainDir="down" code="plain">
+        <trackTopology>
+          <trackBegin absPos="1000" pos="0" id="tb4">
+            <connection id="cb4" ref="ce2" />
+          </trackBegin>
+          <trackEnd absPos="1200" pos="20" id="te4">
+            <connection id="ce4" ref="cb5" />
+          </trackEnd>
+        </trackTopology>
+      </track>
+      <track id="tr5" name="21T" mainDir="down" code="plain">
+        <trackTopology>
+          <trackBegin absPos="1200" pos="0" id="tb5">
+            <connection id="cb5" ref="ce4" />
+          </trackBegin>
+          <trackEnd absPos="1500" pos="30" id="te5">
+            <connection id="ce5" ref="cb3" />
+          </trackEnd>
+          <connections>
+            <switch id="sw1" pos="0" trackContinueCourse="straight" normalPosition="straight">
+              <additionalName name="21" />
+              <connection id="c1-cb6" ref="cb6" orientation="outgoing" course="left" />
+            </switch>
+          </connections>
+        </trackTopology>
+        <ocsElements>
+          <signals>
+            <signal id="sig4" dir="down" pos="30">
+              <additionalName name="3A" />
+            </signal>
+          </signals>
+        </ocsElements>
+      </track>
+      <track id="tr6" name="21T" mainDir="down" code="corner">
+        <trackTopology>
+          <trackBegin absPos="1200" pos="0" id="tb6">
+            <connection id="cb6" ref="c1-cb6" />
+          </trackBegin>
+          <trackEnd absPos="1500" pos="54" id="te6">
+            <connection id="ce6" ref="cb7" />
+          </trackEnd>
+        </trackTopology>
+      </track>
+      <track id="tr7" name="1T" mainDir="up" code="plain">
+        <trackTopology>
+          <trackBegin absPos="1500" pos="0" id="tb7">
+            <connection id="cb7" ref="ce6" />
+          </trackBegin>
+          <trackEnd absPos="2300" pos="260" id="te7">
+            <connection id="ce7" ref="cb10" />
+          </trackEnd>
+        </trackTopology>
+      </track>
+      <track id="tr8" name="51T" mainDir="down" code="plain">
+        <trackTopology>
+          <trackBegin absPos="2300" pos="0" id="tb8">
+            <connection id="cb8" ref="ce3" />
+          </trackBegin>
+          <trackEnd absPos="2600" pos="30" id="te8">
+            <connection id="ce8" ref="cb9" />
+          </trackEnd>
+        </trackTopology>
+      </track>
+      <track id="tr9" name="51T" mainDir="down" code="plain">
+        <trackTopology>
+          <trackBegin absPos="2600" pos="0" id="tb9">
+            <connection id="cb9" ref="ce8" />
+          </trackBegin>
+          <trackEnd absPos="2800" pos="20" id="te9">
+            <connection id="ce9" ref="cb11" />
+          </trackEnd>
+          <connections>
+            <switch id="sw2" pos="0" trackContinueCourse="straight" normalPosition="straight">
+              <additionalName name="51" />
+              <connection id="c2-ce10" ref="ce10" orientation="incoming" course="straight" />
+            </switch>
+          </connections>
+        </trackTopology>
+      </track>
+      <track id="tr10" name="51T" mainDir="down" code="corner">
+        <trackTopology>
+          <trackBegin absPos="2300" pos="0" id="tb10">
+            <connection id="cb10" ref="ce7" />
+          </trackBegin>
+          <trackEnd absPos="2600" pos="54" id="te10">
+            <connection id="ce10" ref="c2-ce10" />
+          </trackEnd>
+        </trackTopology>
+        <ocsElements>
+          <signals>
+            <signal id="sig2" dir="up" pos="15">
+              <additionalName name="4A" />
+            </signal>
+          </signals>
+        </ocsElements>
+      </track>
+      <track id="tr11" name="BT" mainDir="up" code="plain">
+        <trackTopology>
+          <trackBegin absPos="2800" pos="0" id="tb11">
+            <connection id="cb11" ref="ce9" />
+          </trackBegin>
+          <trackEnd absPos="3300" pos="100" id="te11">
+            <connection id="ce11" ref="cb12" />
+          </trackEnd>
+        </trackTopology>
+        <ocsElements>
+          <signals>
+            <signal id="sig3" dir="down" pos="100">
+              <additionalName name="2A" />
+            </signal>
+          </signals>
+        </ocsElements>
+      </track>
+      <track id="tr12" name="B200T" mainDir="up" code="plain">
+        <trackTopology>
+          <trackBegin absPos="3300" pos="0" id="tb12">
+            <connection id="cb12" ref="ce11" />
+          </trackBegin>
+          <trackEnd absPos="3800" pos="100" id="te12">
+            <openEnd id="te12" />
+          </trackEnd>
+        </trackTopology>
+      </track>
+    </tracks>
+  </infrastructure>
+  <infrastructureVisualizations>
+    <visualization id="vis1" infrastructureRef="inf001">
+      <lineVis>
+        <trackVis ref="tr1">
+          <trackElementVis ref="tb1">
+            <position x="50" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te1">
+            <position x="150" y="230" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr2">
+          <trackElementVis ref="tb2">
+            <position x="150" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te2">
+            <position x="250" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="sig1">
+            <position x="150" y="215" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr3">
+          <trackElementVis ref="tb3">
+            <position x="300" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te3">
+            <position x="560" y="230" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr4">
+          <trackElementVis ref="tb4">
+            <position x="250" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te4">
+            <position x="270" y="230" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr5">
+          <trackElementVis ref="tb5">
+            <position x="270" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te5">
+            <position x="300" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="sig4">
+            <position x="300" y="235" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr6">
+          <trackElementVis ref="tb6">
+            <position x="270" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te6">
+            <position x="300" y="190" />
+          </trackElementVis>
+          <trackElementVis ref="tr6_mid">
+            <position x="290" y="190" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr7">
+          <trackElementVis ref="tb7">
+            <position x="300" y="190" />
+          </trackElementVis>
+          <trackElementVis ref="te7">
+            <position x="560" y="190" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr8">
+          <trackElementVis ref="tb8">
+            <position x="560" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te8">
+            <position x="590" y="230" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr9">
+          <trackElementVis ref="tb9">
+            <position x="590" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te9">
+            <position x="610" y="230" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr10">
+          <trackElementVis ref="tb10">
+            <position x="560" y="190" />
+          </trackElementVis>
+          <trackElementVis ref="te10">
+            <position x="590" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="tr10_mid">
+            <position x="570" y="190" />
+          </trackElementVis>
+          <trackElementVis ref="sig2">
+            <position x="560" y="175" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr11">
+          <trackElementVis ref="tb11">
+            <position x="610" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te11">
+            <position x="710" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="sig3">
+            <position x="710" y="235" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr12">
+          <trackElementVis ref="tb12">
+            <position x="710" y="230" />
+          </trackElementVis>
+          <trackElementVis ref="te12">
+            <position x="810" y="230" />
+          </trackElementVis>
+        </trackVis>
+      </lineVis>
+      <objectVis ref="sw1">
+        <position x="259" y="236" />
+      </objectVis>
+      <objectVis ref="sw2">
+        <position x="590" y="230" />
+      </objectVis>
+    </visualization>
+  </infrastructureVisualizations>
+</railml>

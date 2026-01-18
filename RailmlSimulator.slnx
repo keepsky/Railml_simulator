@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Railml.Simulation.Core/Railml.Simulation.Core.csproj" />
+  <Project Path="Railml.Simulator.UI/Railml.Simulator.UI.csproj" />
+</Solution>
