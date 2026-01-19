@@ -21,7 +21,7 @@
             <Button Content="Settings" Click="OnSettingsClick"/>
             <Separator/>
             <TextBlock Text="Speed:" VerticalAlignment="Center" Margin="5,0"/>
-            <Slider Width="100" Minimum="0.5" Maximum="4.0" Value="{Binding TimeScale}" TickFrequency="0.5" IsSnapToTickEnabled="False" VerticalAlignment="Center"/>
+            <Slider Width="100" Minimum="0.5" Maximum="50.0" Value="{Binding TimeScale}" TickFrequency="0.5" IsSnapToTickEnabled="False" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding TimeScale, StringFormat='{}{0:F1}x'}" VerticalAlignment="Center" Width="30" Margin="5,0"/>
         </ToolBar>
 
