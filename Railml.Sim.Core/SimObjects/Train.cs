@@ -13,7 +13,10 @@ namespace Railml.Sim.Core.SimObjects
         // Position State
         public SimTrack CurrentTrack { get; set; }
         public double PositionOnTrack { get; set; } // meters from Track Begin
-        public TrainDirection MoveDirection { get; set; } // Up (Pos increasing) or Down (Pos decreasing)
+        public TrainDirection MoveDirection { get; set; } = TrainDirection.Up; // Up (Pos increasing) or Down (Pos decreasing)
+
+        // State for signal logic
+        public bool IsWaitingForSignal { get; set; } = false;
 
         public Train(string id, SimulationSettings settings)
         {

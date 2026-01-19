@@ -67,5 +67,14 @@ namespace Railml.Sim.Core
              sw.CurrentCourse = desiredCourse;
              return true;
         }
+
+        public void ReportTrainWaitingAtSignal(SimSignal signal)
+        {
+            // User requirement: "5 seconds later, show Green aspect"
+            // Schedule SignalChangeEvent
+            var delay = 5.0;
+            var evt = new Events.SignalChangeEvent(_manager.CurrentTime + delay, signal, SignalAspect.Proceed);
+            _manager.EventQueue.Enqueue(evt);
+        }
     }
 }

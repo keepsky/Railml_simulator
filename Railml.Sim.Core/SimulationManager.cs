@@ -19,6 +19,8 @@ namespace Railml.Sim.Core
         public Dictionary<string, SimSignal> Signals { get; } = new Dictionary<string, SimSignal>();
         public List<Train> Trains { get; } = new List<Train>();
 
+        public InterlockingSystem Interlocking { get; private set; }
+
         public double CurrentTime { get; private set; } = 0.0;
         public bool IsRunning { get; private set; } = false;
 
@@ -112,6 +114,7 @@ namespace Railml.Sim.Core
                 }
             }
 
+            Interlocking = new InterlockingSystem(this);
         }
 
         public void Start()

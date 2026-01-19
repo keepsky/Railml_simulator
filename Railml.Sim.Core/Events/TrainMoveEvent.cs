@@ -49,17 +49,91 @@ namespace Railml.Sim.Core.Events
                 endOfTrack = true;
             }
 
+            // Track if we are braking for any signal
+            bool brakingForSignal = false;
+
             // 3. Signal Logic
             // Check signals ahead. 
-            // If Signal within settings.SignalRecognitionDistance and Aspect is Red.
-            // Target Speed = 0 at Signal.Pos
-            // Decel = v^2 / 2d
-            
-            // TODO: Signal Search
-            
-            // 4. Update Speed
-            // Default acceleration/deceleration if not braking for signal
-            if (!endOfTrack && _train.Speed < _train.MaxSpeed)
+            // Look for signals on current track in direction of travel.
+            if (_train.CurrentTrack.RailmlTrack.OcsElements?.Signals?.SignalList != null && _train.CurrentTrack.IsOccupied) 
+            {
+               foreach(var sigMeta in _train.CurrentTrack.RailmlTrack.OcsElements.Signals.SignalList)
+               {
+                   // Check direction match
+                   if (sigMeta.Dir != "up" && _train.MoveDirection == TrainDirection.Up) continue;
+                   if (sigMeta.Dir != "down" && _train.MoveDirection == TrainDirection.Down) continue;
+                   
+                   // Check position
+                   // Up: Train Pos < Sig Pos.
+                   // Down: Train Pos > Sig Pos.
+                   // And within braking/recog distance.
+                   
+                   double distToSignal = double.MaxValue;
+                   if (_train.MoveDirection == TrainDirection.Up)
+                   {
+                       if (sigMeta.Pos > _train.PositionOnTrack)
+                           distToSignal = sigMeta.Pos - _train.PositionOnTrack;
+                   }
+                   else
+                   {
+                       if (sigMeta.Pos < _train.PositionOnTrack)
+                           distToSignal = _train.PositionOnTrack - sigMeta.Pos;
+                   }
+                   
+                   if (distToSignal <= context.Settings.SignalRecognitionDistance)
+                   {
+                       // Found meaningful signal using ID
+                       if (manager.Signals.TryGetValue(sigMeta.Id, out var signal))
+                       {
+                           if (signal.Aspect == SignalAspect.Stop)
+                           {
+                               brakingForSignal = true;
+
+                               // We must stop.
+                               // Simplified: If at signal (dist approx 0), stop.
+                               // Else, brake.
+                               
+                               if (distToSignal < 1.0 || _train.Speed < 0.01) // At signal or Stopped
+                               {
+                                   _train.Speed = 0;
+                                   
+                                   // Notified Interlocking?
+                                   if (!_train.IsWaitingForSignal)
+                                   {
+                                       _train.IsWaitingForSignal = true;
+                                       if (manager.Interlocking != null)
+                                       {
+                                            manager.Interlocking.ReportTrainWaitingAtSignal(signal);
+                                       }
+                                   }
+                               }
+                               else
+                               {
+                                   // Brake
+                                   // v_new = v_old - decel * dt
+                                   double decel = context.Settings.SignalBrakingDeceleration;
+                                   
+                                   // Only brake if we need to? 
+                                   // Simple logic: If Red, simplify brake to stop.
+                                   // If we are stopped (handled above), we wait.
+                                   // If moving, brake.
+                                   _train.Speed -= decel * dt;
+                                   if (_train.Speed < 0) _train.Speed = 0;
+                               }
+                           }
+                           else if (signal.Aspect == SignalAspect.Proceed)
+                           {
+                               if (_train.IsWaitingForSignal)
+                               {
+                                   _train.IsWaitingForSignal = false; // Resolved
+                               }
+                           }
+                       }
+                   }
+               }
+            }
+            // Default acceleration if not braking for signal
+            if (!endOfTrack && !brakingForSignal && !_train.IsWaitingForSignal && _train.Speed < _train.MaxSpeed)
             {
                 _train.Speed += 0.5 * dt; // Simple acceleration
                 if (_train.Speed > _train.MaxSpeed) _train.Speed = _train.MaxSpeed;
@@ -72,7 +146,10 @@ namespace Railml.Sim.Core.Events
             // Schedule next move
             if (!endOfTrack || _train.Speed > 0)
             {
-                context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + dt, _train));
+                // If stopped (Speed 0), wait longer to save CPU? or same dt?
+                // If waiting for signal, we can wait 1 sec.
+                double nextDt = _train.Speed <= 0.001 ? 1.0 : dt;
+                context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + nextDt, _train));
             }
         }
     }

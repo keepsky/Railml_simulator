@@ -19,6 +19,10 @@
             <Button Content="Stop" Click="OnStopClick"/>
             <Separator/>
             <Button Content="Settings" Click="OnSettingsClick"/>
+            <Separator/>
+            <TextBlock Text="Speed:" VerticalAlignment="Center" Margin="5,0"/>
+            <Slider Width="100" Minimum="0.5" Maximum="4.0" Value="{Binding TimeScale}" TickFrequency="0.5" IsSnapToTickEnabled="False" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding TimeScale, StringFormat='{}{0:F1}x'}" VerticalAlignment="Center" Width="30" Margin="5,0"/>
         </ToolBar>
 
         <skia:SKElement Name="SkiaCanvas" Grid.Row="1" PaintSurface="OnPaintSurface"/>
@@ -27,6 +31,8 @@
             <TextBlock Name="StatusText" Text="Ready"/>
             <Separator/>
             <TextBlock Text="{Binding CurrentTime, StringFormat='Time: {0:F2} s'}"/>
+            <Separator/>
+            <TextBlock Text="{Binding PendingEventCount, StringFormat='Events: {0}'}"/>
         </StatusBar>
     </Grid>
 </Window>

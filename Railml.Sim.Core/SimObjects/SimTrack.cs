@@ -14,7 +14,7 @@ namespace Railml.Sim.Core.SimObjects
             RailmlTrack = track;
         }
 
-        public double Length => RailmlTrack.TrackTopology.TrackEnd.Pos - RailmlTrack.TrackTopology.TrackBegin.Pos;
+        public double Length => System.Math.Abs(RailmlTrack.TrackTopology.TrackEnd.AbsPos - RailmlTrack.TrackTopology.TrackBegin.AbsPos);
 
         // Visualization Coordinates
         public Point StartScreenPos { get; set; }

@@ -68,6 +68,15 @@ namespace Railml.Sim.UI.Rendering
             }
         }
 
+        private SKPaint _trainRectPaint = new SKPaint
+        {
+            Color = SKColors.Pink.WithAlpha(204), // 20% Transparency = 80% Opacity
+            StrokeWidth = 8, // Track(4) + 4
+            StrokeCap = SKStrokeCap.Butt,
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke
+        };
+
         private void RenderTrains(SKCanvas canvas, SimulationManager manager)
         {
             foreach (var train in manager.Trains)
@@ -75,17 +84,50 @@ namespace Railml.Sim.UI.Rendering
                 var track = train.CurrentTrack;
                 if (track != null)
                 {
-                     // interpolated position
                      float x1 = (float)track.StartScreenPos.X;
                      float y1 = (float)track.StartScreenPos.Y;
                      float x2 = (float)track.EndScreenPos.X;
                      float y2 = (float)track.EndScreenPos.Y;
-                        
-                     float t = (float)(train.PositionOnTrack / track.Length);
-                     float cx = x1 + (x2 - x1) * t;
-                     float cy = y1 + (y2 - y1) * t;
-                        
-                     canvas.DrawCircle(cx, cy, 5, _trainPaint);
+                     
+                     // Track connection length in meters
+                     // Avoid div by zero.
+                     if (track.Length <= 0.001) continue;
+
+                     double headPos = train.PositionOnTrack;
+                     double tailPos = headPos;
+
+                     if (train.MoveDirection == TrainDirection.Up)
+                     {
+                         // Moving towards End (Pos increasing). Tail is behind (smaller pos).
+                         tailPos = headPos - train.Length;
+                     }
+                     else
+                     {
+                         // Moving towards Start (Pos decreasing). Tail is behind (larger pos).
+                         tailPos = headPos + train.Length;
+                     }
+
+                     // Clamp to track bounds to draw only what's on this track
+                     if (headPos < 0) headPos = 0;
+                     if (headPos > track.Length) headPos = track.Length;
+                     
+                     if (tailPos < 0) tailPos = 0;
+                     if (tailPos > track.Length) tailPos = track.Length;
+
+                     // Convert to t [0..1]
+                     float tHead = (float)(headPos / track.Length);
+                     float tTail = (float)(tailPos / track.Length);
+
+                     // Map to Screen
+                     float hx = x1 + (x2 - x1) * tHead;
+                     float hy = y1 + (y2 - y1) * tHead;
+                     
+                     float tx = x1 + (x2 - x1) * tTail;
+                     float ty = y1 + (y2 - y1) * tTail;
+
+                     // Draw Train Segment
+                     // Use specific paint with width = TrackWidth + 4
+                     canvas.DrawLine(hx, hy, tx, ty, _trainRectPaint);
                 }
             }
         }

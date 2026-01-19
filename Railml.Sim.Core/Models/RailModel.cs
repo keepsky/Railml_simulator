@@ -187,6 +187,9 @@ namespace Railml.Sim.Core.Models
         [XmlAttribute(AttributeName = "pos")]
         public double Pos { get; set; }
 
+        [XmlAttribute(AttributeName = "absPos")]
+        public double AbsPos { get; set; }
+
         [XmlAttribute(AttributeName = "id")]
         public string Id { get; set; }
         

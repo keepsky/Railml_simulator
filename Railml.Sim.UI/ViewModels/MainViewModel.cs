@@ -15,6 +15,20 @@ namespace Railml.Sim.UI.ViewModels
         public SimulationManager SimulationManager => _simulationManager;
         public double CurrentTime => _simulationManager?.CurrentTime ?? 0.0;
         public SimulationSettings CurrentSettings { get; set; }
+        
+        private double _timeScale = 1.0;
+        public double TimeScale
+        {
+            get => _timeScale;
+            set
+            {
+                if (_timeScale != value)
+                {
+                    _timeScale = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public MainViewModel()
         {
@@ -54,13 +68,20 @@ namespace Railml.Sim.UI.ViewModels
                 // Sync simulation time to wall clock or run as fast as possible?
                 // Request said: "Usage defined unit time ... continuous movement".
                 // If we want real-time visualization, we advance by DeltaTime.
-                double dt = 0.033; // 33ms
+                double dt = 0.033 * TimeScale; // Apply TimeScale
                 _simulationManager.RunUntil(_simulationManager.CurrentTime + dt);
                 
                 OnPropertyChanged(nameof(CurrentTime));
+                
+                // Update Event Count
+                PendingEventCount = _simulationManager.EventQueue.Count;
+                OnPropertyChanged(nameof(PendingEventCount));
+
                 // Trigger Redraw (View will handle this via InvalidateVisual or Binding)
             }
         }
+
+        public int PendingEventCount { get; private set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null)
