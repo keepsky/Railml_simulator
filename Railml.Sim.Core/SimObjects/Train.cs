@@ -14,6 +14,9 @@ namespace Railml.Sim.Core.SimObjects
         public SimTrack CurrentTrack { get; set; }
         public double PositionOnTrack { get; set; } // meters from Track Begin
         public TrainDirection MoveDirection { get; set; } = TrainDirection.Up; // Up (Pos increasing) or Down (Pos decreasing)
+        
+        // Tracks physically occupied by this train (Head + Tail)
+        public System.Collections.Generic.List<SimTrack> OccupiedTracks { get; set; } = new System.Collections.Generic.List<SimTrack>();
 
         // State for signal logic
         public bool IsWaitingForSignal { get; set; } = false;

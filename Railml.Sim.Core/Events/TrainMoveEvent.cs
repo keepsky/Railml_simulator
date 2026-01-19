@@ -29,24 +29,108 @@ namespace Railml.Sim.Core.Events
             else
                 _train.PositionOnTrack -= distance;
 
+            // Updated Occupancy (Visual + Logic)
+            manager.UpdateTrainOccupancy(_train);
+
             // 2. Track Transition Logic
-            // If Position > Length (Up) or < 0 (Down)
             bool endOfTrack = false;
-            if (_train.MoveDirection == TrainDirection.Up && _train.PositionOnTrack > _train.CurrentTrack.Length)
+            // Determine if we hit boundary
+            bool hitEnd = (_train.MoveDirection == TrainDirection.Up && _train.PositionOnTrack >= _train.CurrentTrack.Length);
+            bool hitStart = (_train.MoveDirection == TrainDirection.Down && _train.PositionOnTrack <= 0);
+
+            if (hitEnd || hitStart)
             {
-                // Check connections at End
-                // Simplified: Just loop or stop for now.
-                // TODO: Implement Switch/Connection traversal
-                _train.PositionOnTrack = _train.CurrentTrack.Length;
-                _train.Speed = 0; // Stop at end
-                endOfTrack = true;
-            }
-            else if (_train.MoveDirection == TrainDirection.Down && _train.PositionOnTrack < 0)
-            {
-                // Check connections at Begin
-                _train.PositionOnTrack = 0;
-                _train.Speed = 0;
-                endOfTrack = true;
+                // Try to find next track
+                if (manager.FindNextTrack(_train.CurrentTrack, _train.MoveDirection, out var nextTrack, out var nextPos, out var nextDir))
+                {
+                    // Check Signal on Next Track? (User requirements)
+                    // Simplified: If next track has a signal at entry (or guarding it), check it.
+                    // Since we don't have block logic, let's looking for a Signal on the new track
+                    // that is facing us and 'close' to the entry?
+                    // Actually, if there is a signal *at the connection*, it's technically on one of the tracks.
+                    
+                    // Strategy: Move the train logically to the new track.
+                    // Then run the Signal Logic loop immediately (in this same tick or next).
+                    // If I move it now, the Position will be fresh.
+                    // The Signal Logic below (Step 3) checks "signals ahead".
+                    // If I move the train to the new track, Step 3 will run on the new track.
+                    // It will find the signal at 15m (for example).
+                    // If that signal is Red, it will stop the train.
+                    // BUT, the train is already *on* the new track?
+                    // User says: "Train stops at end ... if next Green ... proceed".
+                    // This implies we should *peek* before entering.
+                    
+                    bool canEnter = true;
+                    // Peek signal
+                    // Find signal on nextTrack closest to nextPos in nextDir
+                    // If nextDir=Up, look for signals > nextPos.
+                    // If nextDir=Down, look for signals < nextPos.
+                    // If one is very close (< 20m?), check aspect.
+                    
+                    // Using existing signal loop logic for "Lookahead":
+                    var signals = nextTrack.RailmlTrack.OcsElements?.Signals?.SignalList;
+                    if (signals != null)
+                    {
+                        foreach(var sig in signals)
+                        {
+                             // Match direction
+                             if (sig.Dir != "up" && nextDir == TrainDirection.Up) continue;
+                             if (sig.Dir != "down" && nextDir == TrainDirection.Down) continue;
+                             
+                             double dist = double.MaxValue;
+                             if (nextDir == TrainDirection.Up)
+                             {
+                                 if (sig.Pos >= nextPos) dist = sig.Pos - nextPos;
+                             }
+                             else
+                             {
+                                 if (sig.Pos <= nextPos) dist = nextPos - sig.Pos;
+                             }
+                             
+                             // If signal is within recognition distance (e.g. 200m) AND it is Red -> Stop.
+                             // User requirement: "If next signal is Green -> proceed".
+                             // Implies: If Red -> Don't enter.
+                             
+                             if (dist < 200 && manager.Signals.TryGetValue(sig.Id, out var simSig))
+                             {
+                                 if (simSig.Aspect == SignalAspect.Stop)
+                                 {
+                                     canEnter = false;
+                                     // We stay at edge
+                                     break;
+                                 }
+                             }
+                        }
+                    }
+
+                    if (canEnter)
+                    {
+                        _train.CurrentTrack = nextTrack;
+                        _train.PositionOnTrack = nextPos;
+                        _train.MoveDirection = nextDir;
+                        
+                        // Current distance consumed? 
+                        // We moved 'distance' on old track. 
+                        // Realistically we should subtract the part used.
+                        // Simplified: Just place at start.
+                    }
+                    else
+                    {
+                        // Stop at edge
+                        if (hitEnd) _train.PositionOnTrack = _train.CurrentTrack.Length;
+                        if (hitStart) _train.PositionOnTrack = 0;
+                        _train.Speed = 0;
+                        endOfTrack = true;
+                    }
+                }
+                else
+                {
+                     // No next track (Dead End)
+                    if (hitEnd) _train.PositionOnTrack = _train.CurrentTrack.Length;
+                    if (hitStart) _train.PositionOnTrack = 0;
+                    _train.Speed = 0;
+                    endOfTrack = true;
+                }
             }
 
             // Track if we are braking for any signal
