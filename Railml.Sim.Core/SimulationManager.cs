@@ -18,6 +18,7 @@ namespace Railml.Sim.Core
         public Dictionary<string, SimSwitch> Switches { get; } = new Dictionary<string, SimSwitch>();
         public Dictionary<string, SimSignal> Signals { get; } = new Dictionary<string, SimSignal>();
         public List<Train> Trains { get; } = new List<Train>();
+        private Dictionary<string, List<SimTrack>> _tracksByName = new Dictionary<string, List<SimTrack>>();
 
         public InterlockingSystem Interlocking { get; private set; }
 
@@ -40,7 +41,18 @@ namespace Railml.Sim.Core
             // Build SimObjects
             foreach (var track in _infrastructure.Tracks.TrackList)
             {
-                Tracks[track.Id] = new SimTrack(track);
+                var simTrack = new SimTrack(track);
+                Tracks[track.Id] = simTrack;
+
+                // Populate TracksByName for logical occupancy
+                if (!string.IsNullOrEmpty(track.Name))
+                {
+                    if (!_tracksByName.ContainsKey(track.Name))
+                    {
+                        _tracksByName[track.Name] = new List<SimTrack>();
+                    }
+                    _tracksByName[track.Name].Add(simTrack);
+                }
             }
 
             foreach (var track in _infrastructure.Tracks.TrackList)
@@ -159,6 +171,22 @@ namespace Railml.Sim.Core
             }
         }
 
+        public void RemoveTrain(Train train)
+        {
+            if (Trains.Contains(train))
+            {
+                Trains.Remove(train);
+                // Clear occupancy
+                foreach (var t in train.OccupiedTracks)
+                {
+                    t.OccupyingTrains.Remove(train);
+                }
+                train.OccupiedTracks.Clear();
+                
+                OnTrainRemoved?.Invoke(train);
+            }
+        }
+
         public void UpdateTrainOccupancy(Train train)
         {
             if (train == null || train.CurrentTrack == null) return;
@@ -172,64 +200,108 @@ namespace Railml.Sim.Core
             int safety = 0;
             while (remainingLen > 0 && currentTrack != null && safety++ < 20)
             {
-                newOccupiedTracks.Add(currentTrack);
-
-                double usedLen = 0;
+                // Check Intersection with Track Limits
+                // Track Range [0, currentTrack.Length]
+                double segmentStart, segmentEnd;
+                
                 if (currentDir == TrainDirection.Up)
                 {
-                    // Body extends from Head towards 0
-                    // usedLen is HeadPos (since we start at Head and go to 0)
-                    // But effectively clamped by train length
-                    // actually simpler: How much of the train fits on this track "behind" the head?
-                    // The part on this track is from Head down to Max(0, Head - Remaining)
-                    // Length = Head - Max(0, Head - Remaining)
-                    // Which is Min(Head, Remaining)
-                    usedLen = System.Math.Min(currentPos, remainingLen);
+                    // Train segment on this 'line': [Head - remainingLen, Head]
+                    // (Actually we start at currentPos and go back 'usedLen')
+                    // But effectively the segment covering this track is defined by [currentPos - Min(Pos, Rem), currentPos]
+                    // Wait, simplistic view:
+                    // Train spans [currentPos - remainingLen, currentPos] locally?
+                    // No, that assumes we stay on this track.
+                    
+                    // Simple check: Does the train cover any part of [0, Length]?
+                    // Current Head is at currentPos.
+                    // We consume 'usedLen' backwards.
+                    // So we cover [currentPos - usedLen, currentPos].
+                    
+                    double usedLen = System.Math.Min(currentPos, remainingLen);
+                    // Intersection of [currentPos - usedLen, currentPos] and [0, currentTrack.Length]
+                    double sStart = currentPos - usedLen;
+                    double sEnd = currentPos;
+                    
+                    double iStart = System.Math.Max(0, sStart);
+                    double iEnd = System.Math.Min(currentTrack.Length, sEnd);
+                    
+                    if (iEnd > iStart + 0.001)
+                    {
+                        newOccupiedTracks.Add(currentTrack);
+                    }
+                    
+                    remainingLen -= usedLen;
                 }
                 else
                 {
-                    // Body extends from Head towards Length
-                    // usedLen is (TrackLen - HeadPos)
-                    // The part on this track is from Head up to Min(TrackLen, Head + Remaining)
-                    // Length = Min(TrackLen, Head + Remaining) - Head
-                    // Which is Min(TrackLen - Head, Remaining)
-                    usedLen = System.Math.Min(currentTrack.Length - currentPos, remainingLen);
+                    // Down: Head at currentPos. Body extends to currentPos + remainingLen.
+                    // usedLen is derived from Min(Length - Pos, Rem).
+                    // We cover [currentPos, currentPos + usedLen].
+                    
+                    double usedLen = System.Math.Min(currentTrack.Length - currentPos, remainingLen);
+                    // Intersection of [currentPos, currentPos + usedLen] with [0, Length]
+                    double sStart = currentPos;
+                    double sEnd = currentPos + usedLen;
+                    
+                    double iStart = System.Math.Max(0, sStart);
+                    double iEnd = System.Math.Min(currentTrack.Length, sEnd);
+                    
+                    if (iEnd > iStart + 0.001)
+                    {
+                        newOccupiedTracks.Add(currentTrack);
+                    }
+
+                    remainingLen -= usedLen;
                 }
 
-                remainingLen -= usedLen;
                 if (remainingLen <= 0.001) break;
 
                 // Find previous track
-                // If moving Up, we came from Down direction of previous track (or Up depending on connection).
-                // "Behind" means checking the opposite direction.
-                // If moving Up, check Down.
                 var checkDir = (currentDir == TrainDirection.Up) ? TrainDirection.Down : TrainDirection.Up;
                 
                 if (FindNextTrack(currentTrack, checkDir, out var prevTrack, out var entryPos, out var entryDir))
                 {
                     currentTrack = prevTrack;
                     currentPos = entryPos;
-                    // Invert entry direction to get train's logical direction on previous track
                     currentDir = (entryDir == TrainDirection.Up) ? TrainDirection.Down : TrainDirection.Up;
                 }
                 else
                 {
-                    break; // No connection
+                    break; 
                 }
             }
+
+            // Expand to Logical Occupancy (Siblings by Name)
+            // If a track is occupied, all tracks with the same Name are also occupied.
+            var logicalOccupied = new System.Collections.Generic.HashSet<SimTrack>(newOccupiedTracks);
+            foreach (var track in newOccupiedTracks)
+            {
+                var name = track.RailmlTrack.Name;
+                if (!string.IsNullOrEmpty(name) && _tracksByName.TryGetValue(name, out var siblings))
+                {
+                    foreach (var sibling in siblings)
+                    {
+                         logicalOccupied.Add(sibling);
+                    }
+                }
+            }
+            
+            // Use logical list for syncing
+            var finalOccupiedList = new List<SimTrack>(logicalOccupied);
 
             // Sync with Old Occupancy
             // 1. Remove from tracks no longer occupied
             foreach (var t in train.OccupiedTracks)
             {
-                if (!newOccupiedTracks.Contains(t))
+                if (!logicalOccupied.Contains(t))
                 {
                     t.OccupyingTrains.Remove(train);
                 }
             }
 
             // 2. Add to newly occupied tracks
-            foreach (var t in newOccupiedTracks)
+            foreach (var t in finalOccupiedList)
             {
                 if (!t.OccupyingTrains.Contains(train))
                 {
@@ -238,7 +310,7 @@ namespace Railml.Sim.Core
             }
 
             // 3. Update Train's list
-            train.OccupiedTracks = newOccupiedTracks;
+            train.OccupiedTracks = finalOccupiedList;
         }
 
         public bool FindNextTrack(SimTrack currentTrack, TrainDirection currentDir, out SimTrack nextTrack, out double nextPos, out TrainDirection nextDir)
@@ -509,12 +581,6 @@ namespace Railml.Sim.Core
             OnTrainAdded?.Invoke(train);
         }
 
-        public void RemoveTrain(Train train)
-        {
-            Trains.Remove(train);
-            // also remove from SimTrack
-            train.CurrentTrack?.OccupyingTrains.Remove(train);
-            OnTrainRemoved?.Invoke(train);
-        }
+
     }
 }

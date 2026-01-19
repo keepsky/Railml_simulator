@@ -60,6 +60,14 @@ namespace Railml.Sim.UI.Rendering
             RenderTrains(canvas, manager);
         }
 
+        private SKPaint _trackTextPaint = new SKPaint
+        {
+            Color = SKColors.Black,
+            TextSize = 6,
+            IsAntialias = true,
+            TextAlign = SKTextAlign.Center
+        };
+
         private void RenderTracks(SKCanvas canvas, SimulationManager manager)
         {
             foreach (var track in manager.Tracks.Values)
@@ -87,7 +95,7 @@ namespace Railml.Sim.UI.Rendering
                 
                 if (track.IsOccupied)
                 {
-                    // Draw Blue Occupied Line
+                    // Draw Gray Occupied Line
                     canvas.DrawLine(0, 0, len, 0, _trackActivePaint); 
                 }
                 else
@@ -96,6 +104,14 @@ namespace Railml.Sim.UI.Rendering
                     canvas.DrawRoundRect(rect, 3, 3, _trackFillPaint);
                     // Draw Black Border
                     canvas.DrawRoundRect(rect, 3, 3, _trackStrokePaint);
+                }
+
+                // Draw Track Name
+                // Centered at (len/2, 2.5) to look vertically centered relative to 8px height
+                string name = track.RailmlTrack.Name ?? track.RailmlTrack.Id;
+                if (!string.IsNullOrEmpty(name))
+                {
+                    canvas.DrawText(name, len / 2, 2.5f, _trackTextPaint);
                 }
                 
                 canvas.Restore();
@@ -137,26 +153,32 @@ namespace Railml.Sim.UI.Rendering
                     {
                         // Moving Up (Start -> End). Head is at currentHeadPos.
                         // Body extends towards Start (decreasing pos).
-                        // Segment is [Max(0, Head - Remaining), Head]
                         double tailPos = currentHeadPos - remainingLen;
-                        double actualTail = System.Math.Max(0, tailPos);
                         
-                        segmentStart = actualTail;
-                        segmentEnd = currentHeadPos;
-                        drawLen = segmentEnd - segmentStart;
+                        // Clip to Track Limits [0, Track.Length]
+                        segmentStart = System.Math.Max(0, tailPos);
+                        segmentEnd = System.Math.Min(currentTrack.Length, currentHeadPos);
+                        
+                        // We need "usedLen" for the loop (how much of remainingLen did we consume on this 'layer' if it was infinite?)
+                        // "usedLen" is confusing here.
+                        // Standard logic:
+                        // Dist from Head to Start = currentHeadPos.
+                        // We cover Min(currentHeadPos, remainingLen) on this track's "timeline".
+                        // BUT visual drawLen is clipped.
                     }
                     else // Down
                     {
-                        // Moving Down (End -> Start). Head is at currentHeadPos.
-                        // Body extends towards End (increasing pos).
-                        // Segment is [Head, Min(Length, Head + Remaining)]
+                        // Moving Down (End -> Start)
                         double tailPos = currentHeadPos + remainingLen;
-                        double actualTail = System.Math.Min(currentTrack.Length, tailPos);
-
-                        segmentStart = currentHeadPos;
-                        segmentEnd = actualTail;
-                        drawLen = segmentEnd - segmentStart;
+                        
+                        // Clip
+                        segmentStart = System.Math.Max(0, currentHeadPos);
+                        segmentEnd = System.Math.Min(currentTrack.Length, tailPos);
                     }
+                    
+                    drawLen = segmentEnd - segmentStart;
+                    // Ensure valid
+                    if (drawLen < 0) drawLen = 0;
 
                     // Draw this segment
                     if (drawLen > 0.001)

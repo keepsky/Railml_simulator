@@ -125,11 +125,56 @@ namespace Railml.Sim.Core.Events
                 }
                 else
                 {
-                     // No next track (Dead End)
-                    if (hitEnd) _train.PositionOnTrack = _train.CurrentTrack.Length;
-                    if (hitStart) _train.PositionOnTrack = 0;
-                    _train.Speed = 0;
-                    endOfTrack = true;
+                     // No next track (Dead End or Open End)
+                     var topo = _train.CurrentTrack.RailmlTrack.TrackTopology; // Assuming accessible
+                     bool isOpenEnd = false;
+
+                     if (hitStart && topo?.TrackBegin?.OpenEnd != null) isOpenEnd = true;
+                     if (hitEnd && topo?.TrackEnd?.OpenEnd != null) isOpenEnd = true;
+
+                     if (isOpenEnd)
+                     {
+                         // Allow moving off-track (PositionOnTrack is already updated)
+                         // Just update occupancy
+                         manager.UpdateTrainOccupancy(_train);
+
+                         // Check for full removal
+                         bool remove = false;
+                         if (hitStart) // Moving to negative
+                         {
+                             // Tail is at Pos + Length (assuming Up means Pulling from 100)
+                             // Actually, simpler: If Pos < -Length, assumes fully generated.
+                             // But wait, if I am consistently using logic that Up=Pulling(100->0).
+                             // Then Tail is at Pos+Length.
+                             // If Pos+Length < 0 => Pos < -Length.
+                             if (_train.PositionOnTrack < -_train.Length) remove = true;
+                         }
+                         if (hitEnd) // Moving to positive
+                         {
+                             // Tail is at Pos - Length (Down = Pushing from 0->100?)
+                             // Or Pulling 0->100?
+                             // If Down (Head increases). Tail < Head.
+                             // Tail = Head - Length.
+                             // Tail > TrackLen => Head - Len > TrackLen => Head > TrackLen + Len.
+                             if (_train.PositionOnTrack > _train.CurrentTrack.Length + _train.Length) remove = true;
+                         }
+
+                         if (remove)
+                         {
+                             manager.RemoveTrain(_train);
+                             return; 
+                         }
+                     }
+                     else
+                     {
+                        // Stop at edge
+                        if (hitEnd) _train.PositionOnTrack = _train.CurrentTrack.Length;
+                        if (hitStart) _train.PositionOnTrack = 0;
+                        _train.Speed = 0;
+                        endOfTrack = true;
+                        
+                        manager.UpdateTrainOccupancy(_train);
+                     }
                 }
             }
 
