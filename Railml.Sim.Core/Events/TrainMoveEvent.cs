@@ -40,93 +40,76 @@ namespace Railml.Sim.Core.Events
 
             if (hitEnd || hitStart)
             {
+                // Calculate remainder ("overflow" distance)
+                double remainder = 0;
+                if (hitEnd) remainder = _train.PositionOnTrack - _train.CurrentTrack.Length;
+                if (hitStart) remainder = System.Math.Abs(_train.PositionOnTrack); // 0 - (-dist) = dist
+
                 // Try to find next track
-                if (manager.FindNextTrack(_train.CurrentTrack, _train.MoveDirection, out var nextTrack, out var nextPos, out var nextDir))
+                if (manager.FindNextTrack(_train.CurrentTrack, _train.MoveDirection, out var nextTrack, out var nextEntryPos, out var nextEntryDir))
                 {
-                    // Check Signal on Next Track? (User requirements)
-                    // Simplified: If next track has a signal at entry (or guarding it), check it.
-                    // Since we don't have block logic, let's looking for a Signal on the new track
-                    // that is facing us and 'close' to the entry?
-                    // Actually, if there is a signal *at the connection*, it's technically on one of the tracks.
-                    
-                    // Strategy: Move the train logically to the new track.
-                    // Then run the Signal Logic loop immediately (in this same tick or next).
-                    // If I move it now, the Position will be fresh.
-                    // The Signal Logic below (Step 3) checks "signals ahead".
-                    // If I move the train to the new track, Step 3 will run on the new track.
-                    // It will find the signal at 15m (for example).
-                    // If that signal is Red, it will stop the train.
-                    // BUT, the train is already *on* the new track?
-                    // User says: "Train stops at end ... if next Green ... proceed".
-                    // This implies we should *peek* before entering.
-                    
-                    bool canEnter = true;
-                    // Peek signal
-                    // Find signal on nextTrack closest to nextPos in nextDir
-                    // If nextDir=Up, look for signals > nextPos.
-                    // If nextDir=Down, look for signals < nextPos.
-                    // If one is very close (< 20m?), check aspect.
-                    
-                    // Using existing signal loop logic for "Lookahead":
-                    var signals = nextTrack.RailmlTrack.OcsElements?.Signals?.SignalList;
-                    if (signals != null)
+                    // 1. Check for Blocking Signal on Next Track
+                    SimSignal blockingSignal = null;
+                    if (nextTrack.RailmlTrack.OcsElements?.Signals?.SignalList != null && manager.Signals != null)
                     {
-                        foreach(var sig in signals)
+                        foreach (var sigData in nextTrack.RailmlTrack.OcsElements.Signals.SignalList)
                         {
-                             // Match direction
-                             if (sig.Dir != "up" && nextDir == TrainDirection.Up) continue;
-                             if (sig.Dir != "down" && nextDir == TrainDirection.Down) continue;
-                             
-                             double dist = double.MaxValue;
-                             if (nextDir == TrainDirection.Up)
-                             {
-                                 if (sig.Pos >= nextPos) dist = sig.Pos - nextPos;
-                             }
-                             else
-                             {
-                                 if (sig.Pos <= nextPos) dist = nextPos - sig.Pos;
-                             }
-                             
-                             // If signal is within recognition distance (e.g. 200m) AND it is Red -> Stop.
-                             // User requirement: "If next signal is Green -> proceed".
-                             // Implies: If Red -> Don't enter.
-                             
-                             if (dist < 200 && manager.Signals.TryGetValue(sig.Id, out var simSig))
-                             {
-                                 if (simSig.Aspect == SignalAspect.Stop)
-                                 {
-                                     canEnter = false;
-                                     // We stay at edge
-                                     break;
-                                 }
-                             }
+                            if (manager.Signals.TryGetValue(sigData.Id, out var simSig))
+                            {
+                                // Simplified: Any Red signal on the target track blocks entry
+                                if (simSig.Aspect == SignalAspect.Stop)
+                                {
+                                    blockingSignal = simSig;
+                                    break;
+                                }
+                            }
                         }
                     }
 
-                    if (canEnter)
+                    if (blockingSignal != null)
                     {
-                        _train.CurrentTrack = nextTrack;
-                        _train.PositionOnTrack = nextPos;
-                        _train.MoveDirection = nextDir;
-                        
-                        // Current distance consumed? 
-                        // We moved 'distance' on old track. 
-                        // Realistically we should subtract the part used.
-                        // Simplified: Just place at start.
-                    }
-                    else
-                    {
-                        // Stop at edge
-                        if (hitEnd) _train.PositionOnTrack = _train.CurrentTrack.Length;
-                        if (hitStart) _train.PositionOnTrack = 0;
+                        // STOP and WAIT
+                        _train.IsWaitingForSignal = true;
+                        _train.WaitingSignal = blockingSignal;
                         _train.Speed = 0;
-                        endOfTrack = true;
+                        
+                        // Stop at the very edge of current track
+                        _train.PositionOnTrack = (hitEnd) ? _train.CurrentTrack.Length : 0; 
+                        
+                        manager.UpdateTrainOccupancy(_train);
+                        return; // Do not schedule next move
                     }
+
+                    // 2. ENTER Next Track
+                    _train.CurrentTrack = nextTrack;
+                    _train.PositionOnTrack = nextEntryPos + (remainder * (nextEntryDir == TrainDirection.Up ? 1 : -1)); 
+                    // Note: If entering UP (0->L), we add remainder. If entering DOWN (L->0), we subtract remainder.
+                    // nextEntryDir is the direction on the NEW track.
+                    
+                    _train.MoveDirection = nextEntryDir;
+
+                    // 3. Trigger Signals on Entered Track
+                    if (nextTrack.RailmlTrack.OcsElements?.Signals?.SignalList != null && manager.Signals != null)
+                    {
+                        foreach (var sigData in nextTrack.RailmlTrack.OcsElements.Signals.SignalList)
+                        {
+                            if (manager.Signals.TryGetValue(sigData.Id, out var simSig))
+                            {
+                                // Queue Red (Immediate)
+                                manager.EventQueue.Enqueue(new SignalChangeEvent(manager.CurrentTime, simSig, SignalAspect.Stop));
+                                // Queue Green (Delayed 15s)
+                                manager.EventQueue.Enqueue(new SignalChangeEvent(manager.CurrentTime + 15.0, simSig, SignalAspect.Proceed));
+                            }
+                        }
+                    }
+
+                    // 4. Update Occupancy
+                    manager.UpdateTrainOccupancy(_train);
                 }
                 else
                 {
                      // No next track (Dead End or Open End)
-                     var topo = _train.CurrentTrack.RailmlTrack.TrackTopology; // Assuming accessible
+                     var topo = _train.CurrentTrack.RailmlTrack.TrackTopology; 
                      bool isOpenEnd = false;
 
                      if (hitStart && topo?.TrackBegin?.OpenEnd != null) isOpenEnd = true;
@@ -134,28 +117,17 @@ namespace Railml.Sim.Core.Events
 
                      if (isOpenEnd)
                      {
-                         // Allow moving off-track (PositionOnTrack is already updated)
-                         // Just update occupancy
+                         // Allow moving off-track
                          manager.UpdateTrainOccupancy(_train);
 
                          // Check for full removal
                          bool remove = false;
                          if (hitStart) // Moving to negative
                          {
-                             // Tail is at Pos + Length (assuming Up means Pulling from 100)
-                             // Actually, simpler: If Pos < -Length, assumes fully generated.
-                             // But wait, if I am consistently using logic that Up=Pulling(100->0).
-                             // Then Tail is at Pos+Length.
-                             // If Pos+Length < 0 => Pos < -Length.
                              if (_train.PositionOnTrack < -_train.Length) remove = true;
                          }
                          if (hitEnd) // Moving to positive
                          {
-                             // Tail is at Pos - Length (Down = Pushing from 0->100?)
-                             // Or Pulling 0->100?
-                             // If Down (Head increases). Tail < Head.
-                             // Tail = Head - Length.
-                             // Tail > TrackLen => Head - Len > TrackLen => Head > TrackLen + Len.
                              if (_train.PositionOnTrack > _train.CurrentTrack.Length + _train.Length) remove = true;
                          }
 

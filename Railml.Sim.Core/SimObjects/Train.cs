@@ -20,6 +20,7 @@ namespace Railml.Sim.Core.SimObjects
 
         // State for signal logic
         public bool IsWaitingForSignal { get; set; } = false;
+        public SimSignal WaitingSignal { get; set; } = null;
 
         public Train(string id, SimulationSettings settings)
         {

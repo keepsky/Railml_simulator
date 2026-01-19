@@ -1,5 +1,5 @@
 {
-  "MeanInterArrivalTime": 500,
+  "MeanInterArrivalTime": 300,
   "TrainLength": 100,
   "DefaultSpeed": 25,
   "BrakingDeceleration": 50,
