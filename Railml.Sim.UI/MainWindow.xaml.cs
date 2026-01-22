@@ -60,6 +60,64 @@ namespace Railml.Sim.UI
             }
         }
 
+        // Pan State
+        private bool _isPanning = false;
+        private Point _lastMousePos;
+
+        private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Middle)
+            {
+                _isPanning = true;
+                _lastMousePos = e.GetPosition(SkiaCanvas);
+                SkiaCanvas.CaptureMouse();
+            }
+        }
+
+        private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (_isPanning)
+            {
+                var currentPos = e.GetPosition(SkiaCanvas);
+                float dx = (float)(currentPos.X - _lastMousePos.X);
+                float dy = (float)(currentPos.Y - _lastMousePos.Y);
+                
+                _renderer.Viewport.Pan(dx, dy);
+                SkiaCanvas.InvalidateVisual();
+                
+                _lastMousePos = currentPos;
+            }
+        }
+
+        private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Middle)
+            {
+                _isPanning = false;
+                SkiaCanvas.ReleaseMouseCapture();
+            }
+        }
+
+        private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
+            {
+                // Zoom
+                float zoomFactor = 1.1f;
+                if (e.Delta < 0) zoomFactor = 1.0f / 1.1f;
+
+                var position = e.GetPosition(SkiaCanvas);
+                float x = (float)position.X;
+                float y = (float)position.Y;
+
+                var currentZoom = _renderer.Viewport.Zoom;
+                var newZoom = currentZoom * zoomFactor;
+
+                _renderer.Viewport.SetZoom(newZoom, x, y);
+                SkiaCanvas.InvalidateVisual();
+            }
+        }
+
         private void OnStartClick(object sender, RoutedEventArgs e)
         {
             _viewModel.Start();

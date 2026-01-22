@@ -44,29 +44,65 @@ namespace Railml.Sim.UI.Rendering
             Style = SKPaintStyle.Fill
         };
 
-
-
-
+        public ViewportController Viewport { get; } = new ViewportController();
+        private SKPicture? _staticTrackLayer;
+        private bool _isStaticLayerDirty = true;
 
         public void Render(SKCanvas canvas, SimulationManager manager, int width, int height)
         {
             if (manager == null) return;
             
-            // Optional: Draw background or handle scaling using width/height
-            // canvas.Clear(SKColors.White);
+            // 2. Prepare Static Layer
+            if (_isStaticLayerDirty || _staticTrackLayer == null)
+            {
+                UpdateStaticLayer(manager);
+                _isStaticLayerDirty = false;
+            }
 
-            RenderTracks(canvas, manager);
+            canvas.Clear(SKColors.White);
+
+            // 3. Apply Viewport Transform
+            canvas.Save();
+            canvas.Concat(Viewport.Matrix.Value);
+
+            // 4. Draw Static Layer (Tracks)
+            if (_staticTrackLayer != null)
+            {
+                canvas.DrawPicture(_staticTrackLayer);
+            }
+
+            // 5. Draw Dynamic Layer (Occupancy, Signals, Trains)
+            RenderOccupancyOverlay(canvas, manager);
             RenderSignals(canvas, manager); 
             RenderTrains(canvas, manager);
+
+            canvas.Restore();
+        }
+
+        public void InvalidateStaticLayer()
+        {
+            _isStaticLayerDirty = true;
         }
 
         private SKPaint _trackTextPaint = new SKPaint
         {
             Color = SKColors.Black,
-            TextSize = 6,
+            TextSize = 2f, 
             IsAntialias = true,
             TextAlign = SKTextAlign.Center
         };
+
+        private void UpdateStaticLayer(SimulationManager manager)
+        {
+            using (var recorder = new SKPictureRecorder())
+            {
+                var canvas = recorder.BeginRecording(SKRect.Create(-10000, -10000, 20000, 20000)); // Large bounds
+                
+                RenderTracks(canvas, manager);
+                
+                _staticTrackLayer = recorder.EndRecording();
+            }
+        }
 
         private void RenderTracks(SKCanvas canvas, SimulationManager manager)
         {
@@ -90,27 +126,25 @@ namespace Railml.Sim.UI.Rendering
                 canvas.Translate(x1, y1);
                 canvas.RotateDegrees(angle);
                 
-                // Draw Rect (0, -4, Len, 4) -> 8px height centered locally
+                // Draw Rect (0, -4, Len, 4) -> 8px width
                 SKRect rect = new SKRect(0, -4, len, 4);
                 
-                if (track.IsOccupied)
-                {
-                    // Draw Gray Occupied Line
-                    canvas.DrawLine(0, 0, len, 0, _trackActivePaint); 
-                }
-                else
-                {
-                    // Draw White Fill (One shape per track)
-                    canvas.DrawRoundRect(rect, 3, 3, _trackFillPaint);
-                    // Draw Black Border
-                    canvas.DrawRoundRect(rect, 3, 3, _trackStrokePaint);
-                }
+                _trackFillPaint.StrokeWidth = 0;
+                _trackStrokePaint.StrokeWidth = 1.0f; // Border
+
+                // Always draw "Unoccupied" state in Static Layer
+                // Draw White Fill
+                canvas.DrawRoundRect(rect, 2.0f, 2.0f, _trackFillPaint);
+                // Draw Black Border
+                canvas.DrawRoundRect(rect, 2.0f, 2.0f, _trackStrokePaint);
 
                 // Draw Track Name
-                // Centered at (len/2, 2.5) to look vertically centered relative to 8px height
                 string name = track.RailmlTrack.Name ?? track.RailmlTrack.Id;
                 if (!string.IsNullOrEmpty(name))
                 {
+                    // Center in track
+                    _trackTextPaint.TextSize = 6.0f;
+                    // Vertical center adjustment
                     canvas.DrawText(name, len / 2, 2.5f, _trackTextPaint);
                 }
                 
@@ -118,10 +152,57 @@ namespace Railml.Sim.UI.Rendering
             }
         }
 
+        private void RenderOccupancyOverlay(SKCanvas canvas, SimulationManager manager)
+        {
+             // Identify all occupied Track Names
+             var occupiedNames = new HashSet<string>();
+             foreach(var t in manager.Tracks.Values)
+             {
+                 if (t.IsOccupied && !string.IsNullOrEmpty(t.RailmlTrack.Name))
+                 {
+                     occupiedNames.Add(t.RailmlTrack.Name);
+                 }
+             }
+
+             using (var p = new SKPaint { Color = SKColors.Gray, Style = SKPaintStyle.Fill })
+             {
+                 foreach (var track in manager.Tracks.Values)
+                 {
+                     bool showGray = track.IsOccupied || 
+                                     (!string.IsNullOrEmpty(track.RailmlTrack.Name) && occupiedNames.Contains(track.RailmlTrack.Name));
+
+                     if (showGray)
+                     {
+                        float x1 = (float)track.StartScreenPos.X;
+                        float y1 = (float)track.StartScreenPos.Y;
+                        float x2 = (float)track.EndScreenPos.X;
+                        float y2 = (float)track.EndScreenPos.Y;
+                        
+                        float dx = x2 - x1;
+                        float dy = y2 - y1;
+                        float len = (float)System.Math.Sqrt(dx * dx + dy * dy);
+                        
+                        if (len < 0.001f) continue;
+                        
+                        float angle = (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI);
+                        
+                        canvas.Save();
+                        canvas.Translate(x1, y1);
+                        canvas.RotateDegrees(angle);
+                        
+                        SKRect rect = new SKRect(0, -4, len, 4);
+                        canvas.DrawRect(rect, p);
+                        
+                        canvas.Restore();
+                     }
+                 }
+             }
+        }
+
         private SKPaint _trainRectPaint = new SKPaint
         {
             Color = new SKColor(SKColors.Pink.Red, SKColors.Pink.Green, SKColors.Pink.Blue, 204), // 20% Transparency
-            StrokeWidth = 8, // Track(4) + 4
+            StrokeWidth = 2.0f, // 2m
             StrokeCap = SKStrokeCap.Butt,
             IsAntialias = true,
             Style = SKPaintStyle.Stroke
@@ -138,60 +219,38 @@ namespace Railml.Sim.UI.Rendering
                 double currentHeadPos = train.PositionOnTrack;
                 var currentDir = train.MoveDirection;
 
-                // Loop to draw train across multiple tracks
                 int iterations = 0;
                 while (remainingLen > 0 && currentTrack != null && iterations < 10) // Safety break
                 {
-                    iterations++; // Safety limit
+                    iterations++; 
                     
                     double drawLen = 0;
                     double segmentStart = 0;
                     double segmentEnd = 0;
 
-                    // Calculate segment on current track
                     if (currentDir == TrainDirection.Up)
                     {
-                        // Moving Up (Start -> End). Head is at currentHeadPos.
-                        // Body extends towards Start (decreasing pos).
                         double tailPos = currentHeadPos - remainingLen;
-                        
-                        // Clip to Track Limits [0, Track.Length]
                         segmentStart = System.Math.Max(0, tailPos);
                         segmentEnd = System.Math.Min(currentTrack.Length, currentHeadPos);
-                        
-                        // We need "usedLen" for the loop (how much of remainingLen did we consume on this 'layer' if it was infinite?)
-                        // "usedLen" is confusing here.
-                        // Standard logic:
-                        // Dist from Head to Start = currentHeadPos.
-                        // We cover Min(currentHeadPos, remainingLen) on this track's "timeline".
-                        // BUT visual drawLen is clipped.
                     }
-                    else // Down
+                    else
                     {
-                        // Moving Down (End -> Start)
                         double tailPos = currentHeadPos + remainingLen;
-                        
-                        // Clip
                         segmentStart = System.Math.Max(0, currentHeadPos);
                         segmentEnd = System.Math.Min(currentTrack.Length, tailPos);
                     }
                     
                     drawLen = segmentEnd - segmentStart;
-                    // Ensure valid
                     if (drawLen < 0) drawLen = 0;
 
-                    // Draw this segment
                     if (drawLen > 0.001)
                     {
-                        float x1, y1, x2, y2;
-                        // Map pos to screen coords
-                        // Track screen pos: Start -> End.
                         float tx1 = (float)currentTrack.StartScreenPos.X;
                         float ty1 = (float)currentTrack.StartScreenPos.Y;
                         float tx2 = (float)currentTrack.EndScreenPos.X;
                         float ty2 = (float)currentTrack.EndScreenPos.Y;
 
-                        // Normalize t [0..1]
                         float tStart = (float)(segmentStart / currentTrack.Length);
                         float tEnd = (float)(segmentEnd / currentTrack.Length);
 
@@ -205,28 +264,18 @@ namespace Railml.Sim.UI.Rendering
                     }
 
                     remainingLen -= drawLen;
-
                     if (remainingLen <= 0.001) break;
 
-                    // Find previous track to continue drawing
-                    // We look "behind" the train.
-                    // If moving Up, look for connection at Start (Move Down check).
-                    // If moving Down, look for connection at End (Move Up check).
                     var checkDir = (currentDir == TrainDirection.Up) ? TrainDirection.Down : TrainDirection.Up;
                     
                     if (manager.FindNextTrack(currentTrack, checkDir, out var prevTrack, out var entryPos, out var entryDir))
                     {
                         currentTrack = prevTrack;
                         currentHeadPos = entryPos;
-                        // Important: entryDir is the direction we 'enter' the new track moving in the 'checkDir'.
-                        // But we want the Train's logical direction.
-                        // If we trace 'Down' and enter a track moving 'Up' (relative to that track),
-                        // then the TRAIN is effectively moving 'Down' relative to that track (Opposite of tracer).
                         currentDir = (entryDir == TrainDirection.Up) ? TrainDirection.Down : TrainDirection.Up;
                     }
                     else
                     {
-                        // No connection found, stop drawing
                         break;
                     }
                 }
@@ -235,11 +284,6 @@ namespace Railml.Sim.UI.Rendering
         
         private void RenderSignals(SKCanvas canvas, SimulationManager manager)
         {
-             // New Logic based on user request:
-             // (1) dir="down" -> Above track (Offset -Normal)
-             // (2) dir="up" -> Below track (Offset +Normal)
-             // (3) pos -> Proportional to track length
-             
              foreach(var track in manager.Tracks.Values)
              {
                  if (track.RailmlTrack.OcsElements?.Signals?.SignalList != null)
@@ -249,93 +293,38 @@ namespace Railml.Sim.UI.Rendering
                      float x2 = (float)track.EndScreenPos.X;
                      float y2 = (float)track.EndScreenPos.Y;
                      
-                     // Calculate Track Vector
                      float dx = x2 - x1;
                      float dy = y2 - y1;
-                     float length = (float)System.Math.Sqrt(dx*dx + dy*dy);
-                     if (length < 0.001f) continue;
                      
-                     // Normalized Vector
-                     float nx = dx / length;
-                     float ny = dy / length;
-                     
-                     // Perpendicular Vector (Upward in screen coords is -Y, but "Normal" usually R to L relative to direction?)
-                     // Left Normal: (-ny, nx)
-                     // Right Normal: (ny, -nx)
-                     // Let's assume standard mathematics:
-                     // Vector (dx, dy). Rotate 90 CCW = (-dy, dx).
+                     if (System.Math.Abs(dx) < 0.001f && System.Math.Abs(dy) < 0.001f) continue;
                      
                      foreach(var sig in track.RailmlTrack.OcsElements.Signals.SignalList)
                      {
-                         // Find SimSignal to get state
                          SimSignal simSig = null;
                          if (manager.Signals.TryGetValue(sig.Id, out simSig))
                          {
-                             // Calculate t
-                             // Need absolute pos range of track
-                             double trackBegin = track.RailmlTrack.TrackTopology.TrackBegin.Pos;
-                             double trackEnd = track.RailmlTrack.TrackTopology.TrackEnd.Pos;
-                             double trackLen = System.Math.Abs(trackEnd - trackBegin);
-                             
-                             double sigPos = sig.Pos; // relative to what? usually absolute on line?
-                             // Assuming sig.Pos is in same coordinate space as trackBegin/End
-                             
-                             float t = 0;
-                             if (trackLen > 0)
-                                 t = (float)((sigPos - trackBegin) / (trackEnd - trackBegin));
-                                 
-                             // Clamp t?
-                             if (t < 0) t = 0; else if (t > 1) t = 1;
+                              float renderX = 0;
+                              float renderY = 0;
+                              float offset = 12.0f; // Visual offset
 
-                             float bx = x1 + dx * t;
-                             float by = y1 + dy * t;
-                             
-                             float renderX = bx;
-                             float renderY = by;
-                             
-                             float offset = 15.0f; // 10px radius or offset? User said "10px circle", "above". Offset > radius.
-                             
-                             // Offset logic
-                             // dir="down" -> "Above" -> Y decreases?
-                             // dir="up" -> "Below" -> Y increases?
-                             
-                             // NOTE: Visual "Above" means lower Y.
-                             // Visual "Below" means higher Y.
-                             // This applies if track is roughly horizontal.
-                             // If we use normal vectors:
-                             // "Above" implies Normal pointing "Up" (-Y).
-                             // (-dy, dx) is 90 deg rotation.
-                             // If line is Left->Right (1,0), Normal is (0,1) which is DOWN. 
-                             // So (-dy, dx) is 'Right Normal' or 'Down Normal'.
-                             // We want 'Up Normal' i.e. (dy, -dx).
-                             
-                             float px = dy / length; // (dy, -dx) normalized? No. (nx, ny) -> perp (-ny, nx) is (-dy/L, dx/L)
-                             float py = -dx / length;
-                             
-                             // (px, py) is (-ny, nx) -> (-0, 1) for L->R. That is DOWN.
-                             // Wait. Left->Right is (1,0). 
-                             // (-0, 1) is (0,1). +Y is Down in screen coords.
-                             // So (-ny, nx) is "Down/Right" side.
-                             
-                             // User: "down" -> Above (-Y).
-                             // User: "up" -> Below (+Y).
-                             
-                             if (sig.Dir == "down")
-                             {
-                                 // Draw Above. We found (-ny, nx) points Down.
-                                 // So we subtract it? Or use opposiste.
-                                 // Let's use subtraction of the "Down" vector to go "Up".
-                                 renderX -= px * offset;
-                                 renderY -= py * offset;
-                             }
-                             else if (sig.Dir == "up")
-                             {
-                                 // Draw Below (Down).
-                                 renderX += px * offset;
-                                 renderY += py * offset;
-                             }
-                             
-                             canvas.DrawCircle(renderX, renderY, 5, simSig.Aspect == SignalAspect.Stop ? _signalRedPaint : _signalGreenPaint);
+                              if (sig.Dir == "down")
+                              {
+                                  renderX = x2;
+                                  renderY = y2 + offset;
+                              }
+                              else if (sig.Dir == "up")
+                              {
+                                  renderX = x1;
+                                  renderY = y1 - offset;
+                              }
+                              else
+                              {
+                                  continue;
+                              }
+                              
+                              canvas.DrawCircle(renderX, renderY, 3.0f, simSig.Aspect == SignalAspect.Stop ? _signalRedPaint : _signalGreenPaint);
+                              var sigName = sig.AdditionalName?.Name ?? sig.Id;
+                              canvas.DrawText(sigName, renderX, renderY - 5, _trackTextPaint);
                          }
                      }
                  }

@@ -25,7 +25,7 @@
             <TextBlock Text="{Binding TimeScale, StringFormat='{}{0:F1}x'}" VerticalAlignment="Center" Width="30" Margin="5,0"/>
         </ToolBar>
 
-        <skia:SKElement Name="SkiaCanvas" Grid.Row="1" PaintSurface="OnPaintSurface"/>
+        <skia:SKElement Name="SkiaCanvas" Grid.Row="1" PaintSurface="OnPaintSurface" MouseWheel="OnMouseWheel" MouseDown="OnMouseDown" MouseMove="OnMouseMove" MouseUp="OnMouseUp"/>
 
         <StatusBar Grid.Row="2">
             <TextBlock Name="StatusText" Text="Ready"/>

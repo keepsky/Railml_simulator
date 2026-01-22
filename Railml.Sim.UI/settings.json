@@ -1,9 +1,9 @@
 {
   "MeanInterArrivalTime": 300,
-  "TrainLength": 100,
+  "TrainLength": 300,
   "DefaultSpeed": 25,
   "BrakingDeceleration": 50,
-  "SignalRecognitionDistance": 200,
+  "SignalRecognitionDistance": 500,
   "SignalBrakingDeceleration": 1.5,
   "MovementUpdateInterval": 1,
   "DefaultDirection": 0

@@ -30,6 +30,17 @@ namespace Railml.Sim.Core.SimObjects
             BrakingDeceleration = settings.BrakingDeceleration; 
         }
 
+        public enum TrainState
+        {
+            Stopped,
+            Accelerating,
+            Coasting,
+            Braking,
+            Dwelling
+        }
+
+        public TrainState State { get; set; } = TrainState.Stopped;
+
         // Logic to update position will be handled by Events, but we can have helper methods here.
     }
 }

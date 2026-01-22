@@ -65,6 +65,12 @@ namespace Railml.Sim.Core
                 {
                     foreach (var sw in track.TrackTopology.Connections.Switches)
                     {
+                        // Strict Topology Rule: Switch must be at pos="0"
+                        if (System.Math.Abs(sw.Pos) > 0.001)
+                        {
+                             throw new TopologyException($"Switch {sw.Id} is located at pos={sw.Pos}. According to domain rules, switches must be at pos=0 (split track model).");
+                        }
+
                         if (!Switches.ContainsKey(sw.Id))
                         {
                             Switches[sw.Id] = new SimSwitch(sw);

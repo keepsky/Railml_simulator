@@ -1,3 +1,4 @@
+.agent
 build*
 Railml.Sim.Core/obj/
 Railml.Sim.Core/bin/
