@@ -23,6 +23,9 @@ namespace Railml.Sim.Core
 
         public TrainDirection DefaultDirection { get; set; } = TrainDirection.Up;
 
+        // Switch Logic
+        public double SwitchTransitionTime { get; set; } = 10.0; // seconds
+
         public static SimulationSettings Load(string filePath)
         {
             try

@@ -20,7 +20,7 @@ namespace Railml.Sim.Core.SimObjects
         public SwitchState State { get; set; } = SwitchState.Normal;
         public SwitchState TargetState { get; set; } = SwitchState.Normal;
         public double SwitchingStartTime { get; set; } = 0.0;
-        public double SwitchingDuration { get; set; } = 10.0; // 10 seconds
+        public double SwitchingDuration { get; set; } = 10.0; // Will be overwritten by Settings
 
         public SimSwitch(Switch sw)
         {

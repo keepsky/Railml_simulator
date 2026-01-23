@@ -1,4 +1,5 @@
 using Railml.Sim.Core.SimObjects;
+using Railml.Sim.Core;
 
 namespace Railml.Sim.Core.Events
 {

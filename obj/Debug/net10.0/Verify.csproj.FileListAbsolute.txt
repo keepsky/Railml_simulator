@@ -1,0 +1,6 @@
+C:\WORK\SRC\Railml_simulator\obj\Debug\net10.0\Verify.csproj.AssemblyReference.cache
+C:\WORK\SRC\Railml_simulator\obj\Debug\net10.0\Verify.GeneratedMSBuildEditorConfig.editorconfig
+C:\WORK\SRC\Railml_simulator\obj\Debug\net10.0\Verify.AssemblyInfoInputs.cache
+C:\WORK\SRC\Railml_simulator\obj\Debug\net10.0\Verify.AssemblyInfo.cs
+C:\WORK\SRC\Railml_simulator\obj\Debug\net10.0\Verify.csproj.CoreCompileInputs.cache
+C:\WORK\SRC\Railml_simulator\obj\Debug\net10.0\Verify.sourcelink.json

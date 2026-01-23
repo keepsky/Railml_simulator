@@ -1,4 +1,6 @@
 using System;
+using Railml.Sim.Core;
+using Railml.Sim.Core.Models;
 
 namespace Railml.Sim.Core.Events
 {
@@ -23,22 +25,34 @@ namespace Railml.Sim.Core.Events
             {
                 // For now, hardcode or randomness.
                 // Let's look for any track with OpenEnd in TrackTopology
+                // Find any track with OpenEnd in TrackTopology
+                // User requirement: "start at <openEnd>..."
                 foreach(var kvp in manager.Tracks)
                 {
                     var track = kvp.Value;
-                    if (track.RailmlTrack.TrackTopology.TrackBegin?.OpenEnd != null)
+                    var topo = track.RailmlTrack.TrackTopology;
+                    
+                    if (topo.TrackBegin?.OpenEnd != null)
                     {
+                        // Spawn at Beginning (Pos=0), Move Up (physically 0->L)
                         train.CurrentTrack = track;
                         train.PositionOnTrack = 0;
-                        train.MoveDirection = track.RailmlTrack.MainDir == "up" ? TrainDirection.Up : TrainDirection.Down; // Simplified
-                        // Actually logic (4.2) says: 
-                        // if start at Begin OpenEnd -> Dir = MainDir
-                        // We will assume 'Up' aligns with MainDir for now.
+                        train.MoveDirection = TrainDirection.Up; 
                         
                         manager.AddTrain(train);
                         track.OccupyingTrains.Add(train);
+                        context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + context.Settings.MovementUpdateInterval, train));
+                        break;
+                    }
+                    else if (topo.TrackEnd?.OpenEnd != null)
+                    {
+                        // Spawn at End (Pos=Length), Move Down (physically L->0)
+                        train.CurrentTrack = track;
+                        train.PositionOnTrack = track.Length;
+                        train.MoveDirection = TrainDirection.Down; 
                         
-                        // Schedule first move
+                        manager.AddTrain(train);
+                        track.OccupyingTrains.Add(train);
                         context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + context.Settings.MovementUpdateInterval, train));
                         break;
                     }

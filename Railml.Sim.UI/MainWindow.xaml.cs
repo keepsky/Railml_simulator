@@ -30,6 +30,8 @@ namespace Railml.Sim.UI
                     SkiaCanvas.InvalidateVisual();
                 }
             };
+
+
         }
 
         private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
@@ -141,5 +143,6 @@ namespace Railml.Sim.UI
                 _viewModel.CurrentSettings.Save("settings.json");
             }
         }
+
     }
 }

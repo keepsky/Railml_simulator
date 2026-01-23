@@ -6,5 +6,6 @@
   "SignalRecognitionDistance": 500,
   "SignalBrakingDeceleration": 1.5,
   "MovementUpdateInterval": 1,
-  "DefaultDirection": 0
+  "DefaultDirection": 0,
+  "SwitchTransitionTime": 10
 }

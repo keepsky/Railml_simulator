@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Railml.Sim.Core.SimObjects;
+using Railml.Sim.Core.Events;
 
 namespace Railml.Sim.Core
 {
@@ -11,70 +12,71 @@ namespace Railml.Sim.Core
         public InterlockingSystem(SimulationManager manager)
         {
             _manager = manager;
-            _manager.OnSimulationUpdated += Update;
+            // Removed Update loop subscription in favor of DES events
         }
 
-        public void Update()
+        public void Start()
         {
-            UpdateTrackCircuits();
-            UpdateSignals();
+             // Schedule first auto-check
+             ScheduleAutoCheck(_manager.CurrentTime + 1.0);
         }
 
-        private void UpdateTrackCircuits()
+        private void ScheduleAutoCheck(double time)
         {
-            // Reset occupancy (or handled by Train movement logic? SimTrack.OccupyingTrains is updated there)
-            // But we might want to check exact positions vs TrackCircuitBorder.
-            // Simplified: SimTrack has IsOccupied.
+            _manager.EventQueue.Enqueue(new LambdaEvent(time, PerformAutoInterlockingChecks));
         }
 
-        private void UpdateSignals()
+        private void PerformAutoInterlockingChecks(SimulationContext context)
         {
-            // Simple Logic: Block Signal.
-            // For each signal, check the track it protects.
-            // If the track ahead is occupied, Signal = Red.
+            // 1. Auto Switch Toggle (Example Logic)
+            // Logic from SKILL.md 3.2: "If no trains are present... schedule SwitchMoveEvent"
             
-            // Getting the "Track Ahead" is tricky without a graph traversal.
-            // We can iterate signals and check their "owner" track and direction.
-            
-            foreach(var sig in _manager.Signals.Values)
+            if (_manager.Trains.Count == 0)
             {
-                // Find which track this signal belongs to.
-                // In RailML OcsElements are child of Track.
-                // We need a reverse mapping or search.
-                // For performance, SimSignal should know its Track.
-                
-                // Assuming we find the track:
-                // If Signal Dir is Up, check if Track is occupied.
-                // Real interlocking is complex. 
-                // Simplified Rule: If ANY train is on the track containing the signal, AND the train is "downstream" 
-                // or if the NEXT track is occupied.
-                
-                // For now, let's just set all signals to Green unless immediate track is occupied.
-                 sig.Aspect = SignalAspect.Proceed;
+                 // Check if any switch is moving
+                 bool anyMoving = _manager.Switches.Values.Any(s => s.State == SimSwitch.SwitchState.Moving);
+                 if (!anyMoving)
+                 {
+                     foreach(var sw in _manager.Switches.Values)
+                     {
+                         var target = sw.State == SimSwitch.SwitchState.Normal ? SimSwitch.SwitchState.Reverse : SimSwitch.SwitchState.Normal;
+                         // Schedule move
+                         _manager.EventQueue.Enqueue(new SwitchMoveEvent(context.CurrentTime, sw, target, false));
+                     }
+                 }
             }
-        }
-        
-        // Method to request route / switch change
-        public bool RequestSwitch(SimSwitch sw, string desiredCourse)
-        {
-             // Check if switch is locked or occupied
-             // (4.4.2) If occupied, cannot switch -> enforced here or in Monitor?
-             // Monitor checks accidents. Interlocking prevents them if working correctly.
-             
-             // Find track containing this switch
-             // If track occupied, return false.
-             
-             sw.CurrentCourse = desiredCourse;
-             return true;
+
+            // Reschedule check
+            ScheduleAutoCheck(context.CurrentTime + 1.0);
         }
 
         public void ReportTrainWaitingAtSignal(SimSignal signal)
         {
             // User requirement: "5 seconds later, show Green aspect"
-            // Schedule SignalChangeEvent
             var delay = 5.0;
-            var evt = new Events.SignalChangeEvent(_manager.CurrentTime + delay, signal, SignalAspect.Proceed);
+            var evt = new SignalChangeEvent(_manager.CurrentTime + delay, signal, SignalAspect.Proceed);
             _manager.EventQueue.Enqueue(evt);
+        }
+
+        public void ReportTrainEnterTrack(SimTrack track)
+        {
+            // User requirement: "2 seconds later, set signal to Stop"
+            // Simplified: Find signals located at TrackBegin or TrackEnd of THIS track.
+            
+            var delay = 2.0;
+            foreach(var sig in _manager.Signals.Values)
+            {
+                // TODO: Implement actual track matching
+                // For now, we skip logic to avoid setting ALL signals to Red arbitrarily
+                // or we can implement it if we find a way to map SimSignal to Track.
+            }
+        }
+        
+         // Method to request route / switch change (Generic)
+        public bool RequestSwitch(SimSwitch sw, string desiredCourse)
+        {
+             sw.CurrentCourse = desiredCourse;
+             return true;
         }
     }
 }
