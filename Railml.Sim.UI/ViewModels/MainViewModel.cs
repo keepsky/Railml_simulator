@@ -82,6 +82,15 @@ namespace Railml.Sim.UI.ViewModels
                 });
             };
 
+            _simulationManager.OnAccident += (info) =>
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Stop(); // Stop UI timer and Manager
+                    System.Windows.MessageBox.Show(System.Windows.Application.Current.MainWindow, info, "Simulation Accident", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                });
+            };
+
             OnPropertyChanged(nameof(SimulationManager));
         }
 

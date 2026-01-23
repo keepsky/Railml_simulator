@@ -181,18 +181,7 @@ namespace Railml.Sim.Core.Events
                 if (_train.Speed > _train.MaxSpeed) _train.Speed = _train.MaxSpeed;
             }
 
-            // 5. Check Accidents
-            if (_train.CurrentTrack.OccupyingTrains.Count > 1)
-            {
-                foreach(var other in _train.CurrentTrack.OccupyingTrains)
-                {
-                    if (other == _train || other.CurrentTrack != _train.CurrentTrack) continue;
-                    string type = (other.MoveDirection != _train.MoveDirection) ? "Head-on Collision" : "Rear-end Collision";
-                    Console.WriteLine($"[ACCIDENT] {type} between {_train.Id} and {other.Id} on Track {_train.CurrentTrack.RailmlTrack.Id}");
-                    manager.Stop();
-                    return; 
-                }
-            }
+            // 5. Check Accidents - Removed redundant check (Handled by SafetyMonitor after Execute)
 
             // Schedule next move
             if (!endOfTrack || _train.Speed > 0)

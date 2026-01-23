@@ -20,7 +20,8 @@ namespace Railml.Sim.Core
         public List<Train> Trains { get; } = new List<Train>();
         private Dictionary<string, List<SimTrack>> _tracksByName = new Dictionary<string, List<SimTrack>>();
 
-        public InterlockingSystem Interlocking { get; private set; }
+        public InterlockingSystem Interlocking { get; private set; } = null!;
+        public SafetyMonitor Safety { get; private set; } = null!;
 
         public double CurrentTime { get; private set; } = 0.0;
         public bool IsRunning { get; private set; } = false;
@@ -28,6 +29,7 @@ namespace Railml.Sim.Core
         public event Action<Train> OnTrainAdded;
         public event Action<Train> OnTrainRemoved;
         public event Action OnSimulationUpdated;
+        public event Action<string> OnAccident;
 
         public SimulationManager(Models.Railml model, SimulationSettings settings)
         {
@@ -78,6 +80,7 @@ namespace Railml.Sim.Core
                             if (Tracks.TryGetValue(track.Id, out var sTrack))
                             {
                                 simSwitch.ScreenPos = sTrack.StartScreenPos; // Default to Track Start
+                                simSwitch.ParentTrack = sTrack;
                             }
                             Switches[sw.Id] = simSwitch;
                         }
@@ -138,6 +141,7 @@ namespace Railml.Sim.Core
             }
 
             Interlocking = new InterlockingSystem(this);
+            Safety = new SafetyMonitor(this);
             BuildConnectionMap();
         }
 
@@ -624,6 +628,7 @@ namespace Railml.Sim.Core
                 CurrentTime = evt.ExecutionTime;
                 EventQueue.CurrentTime = CurrentTime; // Sync queue time for Enqueues during Execute
                 evt.Execute(this);
+                Safety.CheckSafety();
             }
             CurrentTime = targetTime;
             EventQueue.CurrentTime = CurrentTime; // Ensure final sync
@@ -633,6 +638,11 @@ namespace Railml.Sim.Core
         {
             Trains.Add(train);
             OnTrainAdded?.Invoke(train);
+        }
+
+        public void ReportAccident(string message)
+        {
+            OnAccident?.Invoke(message);
         }
 
 

@@ -6,6 +6,7 @@ namespace Railml.Sim.Core.SimObjects
     {
         public Switch RailmlSwitch { get; }
         public Point ScreenPos { get; set; }
+        public SimTrack ParentTrack { get; set; } = null!;
         
         public enum SwitchState
         {
