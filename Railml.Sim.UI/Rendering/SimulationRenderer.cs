@@ -285,7 +285,15 @@ namespace Railml.Sim.UI.Rendering
                         canvas.DrawLine(hx, hy, tx, ty, _trainRectPaint);
                     }
 
-                    remainingLen -= drawLen;
+                    // Account for both the drawn part and the off-track part behind the head
+                    double usedLen;
+                    if (currentDir == TrainDirection.Up)
+                        usedLen = System.Math.Min(remainingLen, currentHeadPos);
+                    else
+                        usedLen = System.Math.Min(remainingLen, currentTrack.Length - currentHeadPos);
+
+                    remainingLen -= usedLen;
+
                     if (remainingLen <= 0.001) break;
 
                     var checkDir = (currentDir == TrainDirection.Up) ? TrainDirection.Down : TrainDirection.Up;
