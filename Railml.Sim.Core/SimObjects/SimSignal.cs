@@ -11,7 +11,7 @@ namespace Railml.Sim.Core.SimObjects
     public class SimSignal
     {
         public Signal RailmlSignal { get; }
-        public SignalAspect Aspect { get; set; } = SignalAspect.Proceed;
+        public SignalAspect Aspect { get; set; } = SignalAspect.Stop;
 
         public SimSignal(Signal signal)
         {

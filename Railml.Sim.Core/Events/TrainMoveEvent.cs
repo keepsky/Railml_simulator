@@ -79,6 +79,13 @@ namespace Railml.Sim.Core.Events
                         _train.PositionOnTrack = (hitEnd) ? _train.CurrentTrack.Length : 0; 
                         
                         manager.UpdateTrainOccupancy(_train);
+
+                        // FIX: Report to Interlocking so signal can change
+                        if (manager.Interlocking != null)
+                        {
+                            manager.Interlocking.ReportTrainWaitingAtSignal(blockingSignal);
+                        }
+
                         return; // Do not schedule next move
                     }
 
@@ -215,18 +222,20 @@ namespace Railml.Sim.Core.Events
                                // Else, brake.
                                
                                if (distToSignal < 1.0 || _train.Speed < 0.01) // At signal or Stopped
-                               {
-                                   _train.Speed = 0;
+                                {
+                                    System.Console.WriteLine($"[DEBUG] Train {_train.Id} stopped at Signal {signal.RailmlSignal.Id}. Waiting? {_train.IsWaitingForSignal}");
+                                    _train.Speed = 0;
                                    
                                    // Notified Interlocking?
-                                   if (!_train.IsWaitingForSignal)
-                                   {
-                                       _train.IsWaitingForSignal = true;
-                                       if (manager.Interlocking != null)
-                                       {
-                                            manager.Interlocking.ReportTrainWaitingAtSignal(signal);
-                                       }
-                                   }
+                                    if (!_train.IsWaitingForSignal)
+                                    {
+                                        _train.IsWaitingForSignal = true;
+                                        _train.WaitingSignal = signal; // Critical Fix: Set reference so SignalChangeEvent can find us
+                                        if (manager.Interlocking != null)
+                                        {
+                                             manager.Interlocking.ReportTrainWaitingAtSignal(signal);
+                                        }
+                                    }
                                }
                                else
                                {

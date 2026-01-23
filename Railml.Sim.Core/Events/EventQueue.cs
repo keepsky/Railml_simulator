@@ -10,10 +10,10 @@ namespace Railml.Sim.Core.Events
         {
             _queue.Enqueue(evt, evt);
         }
-
         public DESEvent Dequeue()
         {
-            return _queue.Dequeue();
+            var evt = _queue.Dequeue();
+            return evt;
         }
 
         public bool IsEmpty => _queue.Count == 0;

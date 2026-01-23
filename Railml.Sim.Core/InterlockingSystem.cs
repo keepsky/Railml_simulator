@@ -61,14 +61,34 @@ namespace Railml.Sim.Core
         public void ReportTrainEnterTrack(SimTrack track)
         {
             // User requirement: "2 seconds later, set signal to Stop"
-            // Simplified: Find signals located at TrackBegin or TrackEnd of THIS track.
+            // "When train enters track, set signal to Stop"
+            // We need to find signals associated with this track.
             
-            var delay = 2.0;
-            foreach(var sig in _manager.Signals.Values)
+            if (track.RailmlTrack.OcsElements?.Signals?.SignalList != null)
             {
-                // TODO: Implement actual track matching
-                // For now, we skip logic to avoid setting ALL signals to Red arbitrarily
-                // or we can implement it if we find a way to map SimSignal to Track.
+                // We have a list of Railml Signal objects. We need to find the corresponding SimSignal objects.
+                // Since _manager.Signals is a dictionary by ID, we can look them up.
+                
+                var signalIds = track.RailmlTrack.OcsElements.Signals.SignalList.Select(s => s.Id).ToList();
+                
+                // Schedule a lambda event to update them after 2 seconds
+                var delay = 2.0;
+                
+                _manager.EventQueue.Enqueue(new LambdaEvent(_manager.CurrentTime + delay, (ctx) => 
+                {
+                    var mgr = ctx as SimulationManager;
+                    if (mgr == null) return;
+                    
+                    foreach(var sigId in signalIds)
+                    {
+                        if (mgr.Signals.TryGetValue(sigId, out var simSignal))
+                        {
+                            // Trigger "Stop" event or just set it directly via event?
+                            // Using SignalChangeEvent for consistency and visualization updates if any
+                            mgr.EventQueue.Enqueue(new SignalChangeEvent(ctx.CurrentTime, simSignal, SignalAspect.Stop));
+                        }
+                    }
+                }));
             }
         }
         

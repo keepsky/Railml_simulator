@@ -16,6 +16,7 @@ namespace Railml.Sim.Core.Events
 
         public override void Execute(SimulationContext context)
         {
+            System.Console.WriteLine($"[DEBUG] SignalChangeEvent Executed for {TargetSignal.RailmlSignal.Id}. NewAspect: {NewAspect} at {context.CurrentTime}");
             TargetSignal.Aspect = NewAspect;
             
             // If Signal turns Green, check for waiting trains
@@ -29,8 +30,8 @@ namespace Railml.Sim.Core.Events
                         train.IsWaitingForSignal = false;
                         train.WaitingSignal = null;
                         
-                        // Schedule immediate move
-                        manager.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime, train));
+                        // Schedule immediate move with reaction time (1s)
+                        manager.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + 1.0, train));
                     }
                 }
             }

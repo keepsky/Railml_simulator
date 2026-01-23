@@ -34,6 +34,7 @@ namespace Railml.Sim.Core
             _model = model;
             Settings = settings;
             InitializeWorld();
+            System.Console.WriteLine($"[DEBUG] Manager Initialized. Interlocking is {(Interlocking == null ? "NULL" : "SET")}");
         }
 
         private void InitializeWorld()
