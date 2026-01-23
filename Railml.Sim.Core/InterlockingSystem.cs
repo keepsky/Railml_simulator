@@ -52,67 +52,64 @@ namespace Railml.Sim.Core
 
         public void ReportTrainWaitingAtSignal(SimSignal signal)
         {
-            // User requirement: "5 seconds later, show Green aspect"
-            var delay = 5.0;
-            var evt = new SignalChangeEvent(_manager.CurrentTime + delay, signal, SignalAspect.Proceed);
-            _manager.EventQueue.Enqueue(evt);
+            // User requirement: "2 seconds later, show Green aspect"
+            RequestSignalAspect(signal, SignalAspect.Proceed, 2.0);
         }
 
-        public void ReportTrainEnterTrack(Train train)
+        public void ReportTrainExitTrack(Train train, SimTrack track)
         {
-            var track = train.CurrentTrack;
             if (track == null) return;
 
-            // User requirement: "2 seconds later, set signal to Stop"
-            // "When train enters track, set signal to Stop"
-            // We need to find signals associated with this track.
-            
-            if (track.RailmlTrack.OcsElements?.Signals?.SignalList != null)
+            // Determine Logical Direction
+            string trackMainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up";
+            string trainLogicalDir = (train.MoveDirection == TrainDirection.Up) ? trackMainDir : ((trackMainDir == "up") ? "down" : "up");
+
+            var signals = track.RailmlTrack.OcsElements?.Signals?.SignalList?
+                .Where(s => (s.Dir?.ToLower() ?? "unknown") == trainLogicalDir)
+                .ToList();
+
+            if (signals == null || signals.Count == 0) return;
+
+            // 열차가 트랙을 빠져나가 비점유 상태가 되더라도 신호 상태를 변경하지 않음
+        }
+
+        public void ReportTrainEnterTrack(Train train, SimTrack track)
+        {
+            if (track == null) return;
+
+            // Determine Train's Logical Direction on this track
+            string trackMainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up";
+            string trainLogicalDir = (train.MoveDirection == TrainDirection.Up) ? trackMainDir : ((trackMainDir == "up") ? "down" : "up");
+
+            var signals = track.RailmlTrack.OcsElements?.Signals?.SignalList?
+                .Where(s => (s.Dir?.ToLower() ?? "unknown") == trainLogicalDir)
+                .ToList();
+
+            if (signals == null || signals.Count == 0) return;
+
+            // User Requirement: 10 seconds later, set signal to Stop (Red)
+            foreach (var sigData in signals)
             {
-                // Logic: Only set Stop for signals that face the train's direction?
-                // User said: "If train direction differs from signal dir, signal should not change state."
-                
-                // Determine Train's Logical Direction on this track
-                string trackMainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up"; // Default to up
-                string trainLogicalDir = "up";
-
-                if (train.MoveDirection == TrainDirection.Up) // Moving 0 -> Length
+                if (_manager.Signals.TryGetValue(sigData.Id, out var simSig))
                 {
-                    trainLogicalDir = trackMainDir; 
+                    RequestSignalAspect(simSig, SignalAspect.Stop, 10.0);
                 }
-                else // Moving Length -> 0
-                {
-                    trainLogicalDir = (trackMainDir == "up") ? "down" : "up";
-                }
-
-                // Filter Signals
-                // Case-insensitive
-                // Use ToLower() safely
-                
-                var signalIds = track.RailmlTrack.OcsElements.Signals.SignalList
-                    .Where(s => (s.Dir?.ToLower() ?? "unknown") == trainLogicalDir)
-                    .Select(s => s.Id).ToList();
-                
-                if (signalIds.Count == 0) return;
-
-                // Schedule a lambda event to update them after 2 seconds
-                var delay = 2.0;
-                
-                _manager.EventQueue.Enqueue(new LambdaEvent(_manager.CurrentTime + delay, (ctx) => 
-                {
-                    var mgr = ctx as SimulationManager;
-                    if (mgr == null) return;
-                    
-                    foreach(var sigId in signalIds)
-                    {
-                        if (mgr.Signals.TryGetValue(sigId, out var simSignal))
-                        {
-                            // Trigger "Stop" event
-                            mgr.EventQueue.Enqueue(new SignalChangeEvent(ctx.CurrentTime, simSignal, SignalAspect.Stop));
-                        }
-                    }
-                }));
             }
+        }
+
+        private void RequestSignalAspect(SimSignal signal, SignalAspect target, double delay)
+        {
+            // Prevent redundant enqueues
+            // If already pending this state, skip.
+            if (signal.PendingAspect == target) return;
+
+            // If no pending state, but current state IS already the target, skip.
+            if (signal.PendingAspect == null && signal.Aspect == target) return;
+
+            // Mark as pending and enqueue
+            signal.PendingAspect = target;
+            var evt = new SignalChangeEvent(_manager.CurrentTime + delay, signal, target);
+            _manager.EventQueue.Enqueue(evt);
         }
         
          // Method to request route / switch change (Generic)

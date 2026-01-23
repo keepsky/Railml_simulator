@@ -56,7 +56,7 @@
                 <ListView Grid.Row="1" ItemsSource="{Binding LogEntries}" VirtualizingPanel.IsVirtualizing="True">
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time, StringFormat=F2}" Width="60"/>
+                            <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time}" Width="100"/>
                             <GridViewColumn Header="Type" DisplayMemberBinding="{Binding Type}" Width="80"/>
                             <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="250"/>
                             <GridViewColumn Header="Information" DisplayMemberBinding="{Binding Information}" Width="400"/>

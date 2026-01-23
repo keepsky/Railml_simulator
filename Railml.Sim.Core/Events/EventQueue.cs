@@ -7,21 +7,23 @@ namespace Railml.Sim.Core.Events
     {
         private readonly PriorityQueue<DESEvent, DESEvent> _queue = new PriorityQueue<DESEvent, DESEvent>();
 
-        // Custom event for logging: Time, Type, Message, LogInfo
-        public event Action<double, string, string, string> OnLog;
+        // Custom event for logging: ProcessTime, ExecutionTime, Type, Message, LogInfo
+        public event Action<double, double, string, string, string> OnLog;
+
+        public double CurrentTime { get; set; } = 0.0;
 
         public void Enqueue(DESEvent evt)
         {
             _queue.Enqueue(evt, evt);
-            // Log Enqueue
-            OnLog?.Invoke(evt.ExecutionTime, "Enqueue", evt.ToString(), evt.GetLogInfo());
+            // Log Enqueue: ProcessTime = CurrentTime, ExecutionTime = evt.ExecutionTime
+            OnLog?.Invoke(CurrentTime, evt.ExecutionTime, "Enqueue", evt.ToString(), evt.GetLogInfo());
         }
 
         public DESEvent Dequeue()
         {
             var evt = _queue.Dequeue();
-            // Log Dequeue - Note: Dequeue time is usually CurrentTime, but strictly speaking it's the event time
-            OnLog?.Invoke(evt.ExecutionTime, "Dequeue", evt.ToString(), evt.GetLogInfo()); // Using ExecutionTime as the time for logging
+            // Log Dequeue - CurrentTime is updated by Manager to evt.ExecutionTime during processing
+            OnLog?.Invoke(evt.ExecutionTime, evt.ExecutionTime, "Dequeue", evt.ToString(), evt.GetLogInfo());
             return evt;
         }
 

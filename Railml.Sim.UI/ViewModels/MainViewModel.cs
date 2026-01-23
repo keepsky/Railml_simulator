@@ -60,13 +60,23 @@ namespace Railml.Sim.UI.ViewModels
         {
             _simulationManager = new SimulationManager(model, CurrentSettings);
             
-            // Subscribe to Log Events
-            _simulationManager.EventQueue.OnLog += (time, type, msg, info) =>
+            // Subscribe to Log Events: processTime, executionTime, type, msg, info
+            _simulationManager.EventQueue.OnLog += (pTime, eTime, type, msg, info) =>
             {
                 // UI update on dispatcher
                 System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    LogEntries.Add(new Railml.Sim.UI.Models.LogEntry(time, type, msg, info));
+                    string timeStr = SimUtils.FormatTime(pTime);
+                    string finalInfo = info;
+
+                    if (type == "Enqueue")
+                    {
+                        // Prefix info with execution time in (hh:mm:ss.msec)
+                        finalInfo = $"({SimUtils.FormatTime(eTime)}) {info}";
+                    }
+
+                    LogEntries.Add(new Railml.Sim.UI.Models.LogEntry(timeStr, type, msg, finalInfo));
+                    
                     // Optional: Limit log size
                     if (LogEntries.Count > 1000) LogEntries.RemoveAt(0);
                 });
@@ -89,7 +99,7 @@ namespace Railml.Sim.UI.ViewModels
                     writer.WriteLine("Time\tType\tMessage\tInformation");
                     foreach(var entry in LogEntries)
                     {
-                        writer.WriteLine($"{entry.Time:F2}\t{entry.Type}\t{entry.Message}\t{entry.Information}");
+                        writer.WriteLine($"{entry.Time}\t{entry.Type}\t{entry.Message}\t{entry.Information}");
                     }
                 }
             }

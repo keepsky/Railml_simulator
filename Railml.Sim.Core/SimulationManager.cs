@@ -283,6 +283,28 @@ namespace Railml.Sim.Core
                 }
             }
 
+            // Identify enters/exited tracks
+            if (Interlocking != null)
+            {
+                // Newly Occupied (Enters)
+                foreach (var nt in newOccupiedTracks)
+                {
+                    if (!train.OccupiedTracks.Contains(nt))
+                    {
+                        Interlocking.ReportTrainEnterTrack(train, nt);
+                    }
+                }
+
+                // No longer Occupied (Exits)
+                foreach (var oldTrack in train.OccupiedTracks)
+                {
+                    if (!newOccupiedTracks.Contains(oldTrack))
+                    {
+                        Interlocking.ReportTrainExitTrack(train, oldTrack);
+                    }
+                }
+            }
+
             // Expand to Logical Occupancy (Siblings by Name)
             // If a track is occupied, all tracks with the same Name are also occupied.
             var logicalOccupied = new System.Collections.Generic.HashSet<SimTrack>(newOccupiedTracks);
@@ -581,9 +603,11 @@ namespace Railml.Sim.Core
             {
                 var evt = EventQueue.Dequeue();
                 CurrentTime = evt.ExecutionTime;
+                EventQueue.CurrentTime = CurrentTime; // Sync queue time for Enqueues during Execute
                 evt.Execute(this);
             }
             CurrentTime = targetTime;
+            EventQueue.CurrentTime = CurrentTime; // Ensure final sync
         }
 
         public void AddTrain(Train train)

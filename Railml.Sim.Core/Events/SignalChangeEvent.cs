@@ -24,8 +24,11 @@ namespace Railml.Sim.Core.Events
 
         public override void Execute(SimulationContext context)
         {
+            if (TargetSignal.Aspect == NewAspect) return;
+
             System.Console.WriteLine($"[DEBUG] SignalChangeEvent Executed for {TargetSignal.RailmlSignal.Id}. NewAspect: {NewAspect} at {context.CurrentTime}");
             TargetSignal.Aspect = NewAspect;
+            TargetSignal.PendingAspect = null;
             
             // If Signal turns Green, check for waiting trains
             if (NewAspect == SignalAspect.Proceed && context is SimulationManager manager)

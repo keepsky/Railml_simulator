@@ -12,6 +12,7 @@ namespace Railml.Sim.Core.SimObjects
     {
         public Signal RailmlSignal { get; }
         public SignalAspect Aspect { get; set; } = SignalAspect.Stop;
+        public SignalAspect? PendingAspect { get; set; } = null;
 
         public SimSignal(Signal signal)
         {
