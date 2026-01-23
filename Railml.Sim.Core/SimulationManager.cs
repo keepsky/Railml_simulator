@@ -562,7 +562,26 @@ namespace Railml.Sim.Core
         public void Start()
         {
             IsRunning = true;
-            EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + 1.0));
+            
+            // Search all tracks for OpenEnd boundaries to start spawning
+            foreach (var kvp in Tracks)
+            {
+                var track = kvp.Value;
+                var topo = track.RailmlTrack.TrackTopology;
+
+                if (topo.TrackBegin?.OpenEnd != null)
+                {
+                    // Starts spawning at Begin (Up direction)
+                    EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + 1.0, track, TrainDirection.Up));
+                }
+
+                if (topo.TrackEnd?.OpenEnd != null)
+                {
+                    // Starts spawning at End (Down direction)
+                    EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + 1.5, track, TrainDirection.Down));
+                }
+            }
+
             ProcessEvents();
         }
 

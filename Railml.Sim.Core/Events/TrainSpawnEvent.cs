@@ -6,64 +6,48 @@ namespace Railml.Sim.Core.Events
 {
     public class TrainSpawnEvent : DESEvent
     {
-        public TrainSpawnEvent(double time) : base(time) { }
+        public SimObjects.SimTrack TargetTrack { get; }
+        public TrainDirection Direction { get; }
+
+        public TrainSpawnEvent(double time, SimObjects.SimTrack track, TrainDirection direction) : base(time) 
+        { 
+            TargetTrack = track;
+            Direction = direction;
+        }
 
         public override void Execute(SimulationContext context)
         {
+            var manager = context as SimulationManager;
+            if (manager == null || TargetTrack == null) return;
+
             // Create a new train
-            var trainId = $"T_{context.CurrentTime:F0}";
+            var trainId = $"T_{Direction}_{context.CurrentTime:F0}";
             var train = new Railml.Sim.Core.SimObjects.Train(trainId, context.Settings);
 
-            // Find start track (Logic to pick a start track? Random or first in list?)
-            // User requirement: "trackBegin openEnd point...".
-            // We need to find tracks with "openEnd" at trackBegin or trackEnd? 
-            // (4.2) "If start at <trackBegin><openEnd>, move direction = same as mainDir..."
-            
-            // Simple logic: Find first track with OpenEnd.
-            var manager = context as SimulationManager;
-            if (manager != null)
+            // Set Position based on direction
+            if (Direction == TrainDirection.Up)
             {
-                // For now, hardcode or randomness.
-                // Let's look for any track with OpenEnd in TrackTopology
-                // Find any track with OpenEnd in TrackTopology
-                // User requirement: "start at <openEnd>..."
-                foreach(var kvp in manager.Tracks)
-                {
-                    var track = kvp.Value;
-                    var topo = track.RailmlTrack.TrackTopology;
-                    
-                    if (topo.TrackBegin?.OpenEnd != null)
-                    {
-                        // Spawn at Beginning (Pos=0), Move Up (physically 0->L)
-                        train.CurrentTrack = track;
-                        train.PositionOnTrack = 0;
-                        train.MoveDirection = TrainDirection.Up; 
-                        
-                        manager.AddTrain(train);
-                        track.OccupyingTrains.Add(train);
-                        context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + context.Settings.MovementUpdateInterval, train));
-                        break;
-                    }
-                    else if (topo.TrackEnd?.OpenEnd != null)
-                    {
-                        // Spawn at End (Pos=Length), Move Down (physically L->0)
-                        train.CurrentTrack = track;
-                        train.PositionOnTrack = track.Length;
-                        train.MoveDirection = TrainDirection.Down; 
-                        
-                        manager.AddTrain(train);
-                        track.OccupyingTrains.Add(train);
-                        context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + context.Settings.MovementUpdateInterval, train));
-                        break;
-                    }
-                }
+                // Spawn at Beginning (Pos=0)
+                train.CurrentTrack = TargetTrack;
+                train.PositionOnTrack = 0;
+                train.MoveDirection = TrainDirection.Up; 
             }
+            else
+            {
+                // Spawn at End (Pos=Length)
+                train.CurrentTrack = TargetTrack;
+                train.PositionOnTrack = TargetTrack.Length;
+                train.MoveDirection = TrainDirection.Down; 
+            }
+            
+            manager.AddTrain(train);
+            TargetTrack.OccupyingTrains.Add(train);
+            context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + context.Settings.MovementUpdateInterval, train));
 
-            // Schedule next spawn
-            // Exponential distribution: -mean * ln(uniform_random)
+            // Schedule next spawn for THIS specific point
             var rand = new Random();
             double nextInterval = -context.Settings.MeanInterArrivalTime * Math.Log(rand.NextDouble());
-            context.EventQueue.Enqueue(new TrainSpawnEvent(context.CurrentTime + nextInterval));
+            context.EventQueue.Enqueue(new TrainSpawnEvent(context.CurrentTime + nextInterval, TargetTrack, Direction));
         }
     }
 }
