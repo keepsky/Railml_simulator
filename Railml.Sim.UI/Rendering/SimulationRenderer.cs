@@ -44,6 +44,27 @@ namespace Railml.Sim.UI.Rendering
             Style = SKPaintStyle.Fill
         };
 
+        private SKPaint _switchNormalPaint = new SKPaint
+        {
+            Color = SKColors.Blue,
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill
+        };
+
+        private SKPaint _switchReversePaint = new SKPaint
+        {
+            Color = SKColors.Red,
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill
+        };
+
+        private SKPaint _switchMovingPaint = new SKPaint
+        {
+            Color = SKColors.Gray,
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill
+        };
+
         public ViewportController Viewport { get; } = new ViewportController();
         private SKPicture? _staticTrackLayer;
         private bool _isStaticLayerDirty = true;
@@ -73,6 +94,7 @@ namespace Railml.Sim.UI.Rendering
 
             // 5. Draw Dynamic Layer (Occupancy, Signals, Trains)
             RenderOccupancyOverlay(canvas, manager);
+            RenderSwitches(canvas, manager);
             RenderSignals(canvas, manager); 
             RenderTrains(canvas, manager);
 
@@ -329,6 +351,50 @@ namespace Railml.Sim.UI.Rendering
                      }
                  }
              }
+        }
+
+        private void RenderSwitches(SKCanvas canvas, SimulationManager manager)
+        {
+            foreach (var sw in manager.Switches.Values)
+            {
+                float x = (float)sw.ScreenPos.X;
+                float y = (float)sw.ScreenPos.Y;
+
+                if (x == 0 && y == 0) continue;
+
+                SKPaint paint;
+                if (sw.State == SimSwitch.SwitchState.Moving)
+                {
+                    paint = _switchMovingPaint;
+                }
+                else if (sw.CurrentCourse == sw.RailmlSwitch.NormalPosition)
+                {
+                    paint = _switchNormalPaint;
+                }
+                else
+                {
+                    paint = _switchReversePaint;
+                }
+
+                // Draw a triangle pointing up, located slightly below the point
+                // Base at y+12, top at y+4
+                using (var path = new SKPath())
+                {
+                    path.MoveTo(x, y + 4); // Top
+                    path.LineTo(x - 4, y + 12); // Bottom Left
+                    path.LineTo(x + 4, y + 12); // Bottom Right
+                    path.Close();
+                    
+                    canvas.DrawPath(path, paint);
+                    // Optional: Border
+                    canvas.DrawPath(path, _trackStrokePaint);
+                }
+
+                // Draw Switch Name (ID)
+                string swName = sw.RailmlSwitch.AdditionalName?.Name ?? "";
+                string swLabel = string.IsNullOrEmpty(swName) ? sw.RailmlSwitch.Id : $"{swName}({sw.RailmlSwitch.Id})";
+                canvas.DrawText(swLabel, x, y + 20, _trackTextPaint);
+            }
         }
     }
 }

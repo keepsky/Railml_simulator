@@ -74,7 +74,12 @@ namespace Railml.Sim.Core
 
                         if (!Switches.ContainsKey(sw.Id))
                         {
-                            Switches[sw.Id] = new SimSwitch(sw);
+                            var simSwitch = new SimSwitch(sw);
+                            if (Tracks.TryGetValue(track.Id, out var sTrack))
+                            {
+                                simSwitch.ScreenPos = sTrack.StartScreenPos; // Default to Track Start
+                            }
+                            Switches[sw.Id] = simSwitch;
                         }
                     }
                 }
@@ -125,8 +130,7 @@ namespace Railml.Sim.Core
                          // Check Switches
                          if (Switches.TryGetValue(objVis.Ref, out var simSwitch))
                          {
-                             // simSwitch.ScreenPos ?
-                             // We probably need to store this in SimSwitch too if we want to render it precisely.
+                             simSwitch.ScreenPos = new Point(objVis.Position.X, objVis.Position.Y);
                          }
                          // Check Signals ?
                     }

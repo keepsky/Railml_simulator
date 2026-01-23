@@ -5,6 +5,7 @@ namespace Railml.Sim.Core.SimObjects
     public class SimSwitch
     {
         public Switch RailmlSwitch { get; }
+        public Point ScreenPos { get; set; }
         
         public enum SwitchState
         {
