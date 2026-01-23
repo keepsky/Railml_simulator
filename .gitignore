@@ -1,4 +1,6 @@
 .agent
+*.log
+output*
 build*
 Railml.Sim.Core/obj/
 Railml.Sim.Core/bin/
