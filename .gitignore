@@ -2,6 +2,8 @@
 *.log
 output*
 build*
+obj/
+bin/
 Railml.Sim.Core/obj/
 Railml.Sim.Core/bin/
 Railml.Sim.UI/obj/

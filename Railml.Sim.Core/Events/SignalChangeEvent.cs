@@ -14,6 +14,14 @@ namespace Railml.Sim.Core.Events
             NewAspect = aspect;
         }
 
+        public override string GetLogInfo()
+        {
+            // Note: TargetSignal.Aspect is the *Current* (Old) aspect before Execute runs.
+            string name = TargetSignal.RailmlSignal.AdditionalName?.Name ?? "NoName";
+            string dir = TargetSignal.RailmlSignal.Dir ?? "unknown";
+            return $"Signal: {TargetSignal.RailmlSignal.Id} ({name}), Dir: {dir}, Change: {TargetSignal.Aspect} -> {NewAspect}";
+        }
+
         public override void Execute(SimulationContext context)
         {
             System.Console.WriteLine($"[DEBUG] SignalChangeEvent Executed for {TargetSignal.RailmlSignal.Id}. NewAspect: {NewAspect} at {context.CurrentTime}");

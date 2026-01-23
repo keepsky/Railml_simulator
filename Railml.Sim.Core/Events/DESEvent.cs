@@ -14,6 +14,8 @@ namespace Railml.Sim.Core.Events
 
         public abstract void Execute(SimulationContext context);
 
+        public virtual string GetLogInfo() => "";
+
         public int CompareTo(DESEvent other)
         {
             int timeComparison = ExecutionTime.CompareTo(other.ExecutionTime);

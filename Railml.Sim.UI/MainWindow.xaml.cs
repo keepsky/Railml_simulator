@@ -144,5 +144,19 @@ namespace Railml.Sim.UI
             }
         }
 
+        private void OnClearLogClick(object sender, RoutedEventArgs e)
+        {
+            _viewModel.ClearLog();
+        }
+
+        private void OnSaveLogClick(object sender, RoutedEventArgs e)
+        {
+            var dlg = new SaveFileDialog { Filter = "Log Files (*.txt)|*.txt", FileName = $"sim_log_{DateTime.Now:yyyyMMdd_HHmm}.txt" };
+            if (dlg.ShowDialog() == true)
+            {
+                _viewModel.SaveLog(dlg.FileName);
+            }
+        }
+
     }
 }

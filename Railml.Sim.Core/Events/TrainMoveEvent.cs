@@ -14,6 +14,11 @@ namespace Railml.Sim.Core.Events
             _train = train;
         }
 
+        public override string GetLogInfo()
+        {
+            return $"Train: {_train.Id}, Dir: {_train.MoveDirection}";
+        }
+
         public override void Execute(SimulationContext context)
         {
             var manager = context as SimulationManager;
@@ -51,11 +56,15 @@ namespace Railml.Sim.Core.Events
                 if (manager.FindNextTrack(_train.CurrentTrack, _train.MoveDirection, out var nextTrack, out var nextEntryPos, out var nextEntryDir))
                 {
                     // 1. Check for Blocking Signal on Next Track
+                    string nextLogicalDir = GetTrainLogicalDirection(nextTrack, nextEntryDir);
                     SimSignal blockingSignal = null;
                     if (nextTrack.RailmlTrack.OcsElements?.Signals?.SignalList != null && manager.Signals != null)
                     {
                         foreach (var sigData in nextTrack.RailmlTrack.OcsElements.Signals.SignalList)
                         {
+                            // Filter by direction
+                            if ((sigData.Dir?.ToLower() ?? "unknown") != nextLogicalDir) continue;
+
                             if (manager.Signals.TryGetValue(sigData.Id, out var simSig))
                             {
                                 // Simplified: Any Red signal on the target track blocks entry
@@ -98,10 +107,14 @@ namespace Railml.Sim.Core.Events
                     _train.MoveDirection = nextEntryDir;
 
                     // 3. Trigger Signals on Entered Track
+                    string enteredLogicalDir = GetTrainLogicalDirection(nextTrack, nextEntryDir);
                     if (nextTrack.RailmlTrack.OcsElements?.Signals?.SignalList != null && manager.Signals != null)
                     {
                         foreach (var sigData in nextTrack.RailmlTrack.OcsElements.Signals.SignalList)
                         {
+                            // Filter by direction
+                            if ((sigData.Dir?.ToLower() ?? "unknown") != enteredLogicalDir) continue;
+
                             if (manager.Signals.TryGetValue(sigData.Id, out var simSig))
                             {
                                 // Queue Red (Immediate)
@@ -118,7 +131,7 @@ namespace Railml.Sim.Core.Events
                     // 5. Report to Interlocking
                     if (manager.Interlocking != null)
                     {
-                        manager.Interlocking.ReportTrainEnterTrack(_train.CurrentTrack);
+                        manager.Interlocking.ReportTrainEnterTrack(_train);
                     }
                 }
                 else
@@ -175,21 +188,12 @@ namespace Railml.Sim.Core.Events
                foreach(var sigMeta in _train.CurrentTrack.RailmlTrack.OcsElements.Signals.SignalList)
                {
                    // Determine Train's Logical Direction based on Track.MainDir
-                   string trackMainDir = _train.CurrentTrack.RailmlTrack.MainDir ?? "up"; // Default to up
-                   string trainLogicalDir = "up";
-
-                   if (_train.MoveDirection == TrainDirection.Up) // Moving 0 -> Length
-                   {
-                       trainLogicalDir = trackMainDir; 
-                   }
-                   else // Moving Length -> 0
-                   {
-                       trainLogicalDir = (trackMainDir == "up") ? "down" : "up";
-                   }
+                   string trainLogicalDir = GetTrainLogicalDirection(_train.CurrentTrack, _train.MoveDirection);
 
                    // Check direction match
                    // Signal applies if its Dir matches the Train's Logical Direction
-                   if (sigMeta.Dir != trainLogicalDir) continue;
+                   string sigDir = sigMeta.Dir?.ToLower() ?? "unknown";
+                   if (sigDir != trainLogicalDir) continue;
                    
                    // Check position
                    // Up: Train Pos < Sig Pos.
@@ -350,6 +354,14 @@ namespace Railml.Sim.Core.Events
                 double nextDt = _train.Speed <= 0.001 ? 1.0 : dt;
                 context.EventQueue.Enqueue(new TrainMoveEvent(context.CurrentTime + nextDt, _train));
             }
+        }
+
+        private string GetTrainLogicalDirection(SimTrack track, TrainDirection moveDir)
+        {
+            if (track?.RailmlTrack == null) return "unknown";
+            string mainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up";
+            if (moveDir == TrainDirection.Up) return mainDir;
+            return (mainDir == "up") ? "down" : "up";
         }
     }
 }

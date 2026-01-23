@@ -58,19 +58,43 @@ namespace Railml.Sim.Core
             _manager.EventQueue.Enqueue(evt);
         }
 
-        public void ReportTrainEnterTrack(SimTrack track)
+        public void ReportTrainEnterTrack(Train train)
         {
+            var track = train.CurrentTrack;
+            if (track == null) return;
+
             // User requirement: "2 seconds later, set signal to Stop"
             // "When train enters track, set signal to Stop"
             // We need to find signals associated with this track.
             
             if (track.RailmlTrack.OcsElements?.Signals?.SignalList != null)
             {
-                // We have a list of Railml Signal objects. We need to find the corresponding SimSignal objects.
-                // Since _manager.Signals is a dictionary by ID, we can look them up.
+                // Logic: Only set Stop for signals that face the train's direction?
+                // User said: "If train direction differs from signal dir, signal should not change state."
                 
-                var signalIds = track.RailmlTrack.OcsElements.Signals.SignalList.Select(s => s.Id).ToList();
+                // Determine Train's Logical Direction on this track
+                string trackMainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up"; // Default to up
+                string trainLogicalDir = "up";
+
+                if (train.MoveDirection == TrainDirection.Up) // Moving 0 -> Length
+                {
+                    trainLogicalDir = trackMainDir; 
+                }
+                else // Moving Length -> 0
+                {
+                    trainLogicalDir = (trackMainDir == "up") ? "down" : "up";
+                }
+
+                // Filter Signals
+                // Case-insensitive
+                // Use ToLower() safely
                 
+                var signalIds = track.RailmlTrack.OcsElements.Signals.SignalList
+                    .Where(s => (s.Dir?.ToLower() ?? "unknown") == trainLogicalDir)
+                    .Select(s => s.Id).ToList();
+                
+                if (signalIds.Count == 0) return;
+
                 // Schedule a lambda event to update them after 2 seconds
                 var delay = 2.0;
                 
@@ -83,8 +107,7 @@ namespace Railml.Sim.Core
                     {
                         if (mgr.Signals.TryGetValue(sigId, out var simSignal))
                         {
-                            // Trigger "Stop" event or just set it directly via event?
-                            // Using SignalChangeEvent for consistency and visualization updates if any
+                            // Trigger "Stop" event
                             mgr.EventQueue.Enqueue(new SignalChangeEvent(ctx.CurrentTime, simSignal, SignalAspect.Stop));
                         }
                     }

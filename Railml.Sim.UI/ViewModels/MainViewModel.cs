@@ -12,6 +12,22 @@ namespace Railml.Sim.UI.ViewModels
         private SimulationManager _simulationManager;
         private DispatcherTimer _timer;
 
+        public System.Collections.ObjectModel.ObservableCollection<Railml.Sim.UI.Models.LogEntry> LogEntries { get; } = new System.Collections.ObjectModel.ObservableCollection<Railml.Sim.UI.Models.LogEntry>();
+
+        private bool _isLogVisible;
+        public bool IsLogVisible
+        {
+            get => _isLogVisible;
+            set
+            {
+                if (_isLogVisible != value)
+                {
+                    _isLogVisible = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public SimulationManager SimulationManager => _simulationManager;
         public double CurrentTime => _simulationManager?.CurrentTime ?? 0.0;
         public SimulationSettings CurrentSettings { get; set; }
@@ -43,7 +59,46 @@ namespace Railml.Sim.UI.ViewModels
         public void LoadSimulation(Railml.Sim.Core.Models.Railml model)
         {
             _simulationManager = new SimulationManager(model, CurrentSettings);
+            
+            // Subscribe to Log Events
+            _simulationManager.EventQueue.OnLog += (time, type, msg, info) =>
+            {
+                // UI update on dispatcher
+                System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    LogEntries.Add(new Railml.Sim.UI.Models.LogEntry(time, type, msg, info));
+                    // Optional: Limit log size
+                    if (LogEntries.Count > 1000) LogEntries.RemoveAt(0);
+                });
+            };
+
             OnPropertyChanged(nameof(SimulationManager));
+        }
+
+        public void ClearLog()
+        {
+            LogEntries.Clear();
+        }
+
+        public void SaveLog(string filename)
+        {
+            try 
+            {
+                using (var writer = new System.IO.StreamWriter(filename))
+                {
+                    writer.WriteLine("Time\tType\tMessage\tInformation");
+                    foreach(var entry in LogEntries)
+                    {
+                        writer.WriteLine($"{entry.Time:F2}\t{entry.Type}\t{entry.Message}\t{entry.Information}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Can't show msgbox from VM easily without service, but ignoring or handling in View is better.
+                // We'll throw or assume valid path.
+                Console.WriteLine($"Error saving log: {ex.Message}");
+            }
         }
 
         public void Start()
