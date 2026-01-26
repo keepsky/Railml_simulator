@@ -22,6 +22,12 @@ namespace Railml.Sim.Core
 
         public InterlockingSystem Interlocking { get; private set; } = null!;
         public SafetyMonitor Safety { get; private set; } = null!;
+        
+        private int _nextUpId = 1;
+        private int _nextDownId = 2;
+        private Random _spawnRandom = new Random();
+        // 1.2.1 Random Distribution for Train Generation
+        public double MeanInterArrivalTime { get; set; } = 30.0; // Seconds (Exponential Distribution)
 
         public double CurrentTime { get; private set; } = 0.0;
         public bool IsRunning { get; private set; } = false;
@@ -576,13 +582,17 @@ namespace Railml.Sim.Core
                 if (topo.TrackBegin?.OpenEnd != null)
                 {
                     // Starts spawning at Begin (Up direction)
-                    EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + 1.0, track, TrainDirection.Up));
+                    double nextInterval = -Settings.MeanInterArrivalTime * Math.Log(_spawnRandom.NextDouble());
+                    System.Console.WriteLine($"[DEBUG] Scheduling initial UP train at {CurrentTime + nextInterval} (Interval: {nextInterval})");
+                    EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + nextInterval, track, TrainDirection.Up));
                 }
 
                 if (topo.TrackEnd?.OpenEnd != null)
                 {
                     // Starts spawning at End (Down direction)
-                    EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + 1.5, track, TrainDirection.Down));
+                    double nextInterval = -Settings.MeanInterArrivalTime * Math.Log(_spawnRandom.NextDouble());
+                    System.Console.WriteLine($"[DEBUG] Scheduling initial DOWN train at {CurrentTime + nextInterval} (Interval: {nextInterval})");
+                    EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + nextInterval, track, TrainDirection.Down));
                 }
             }
 
@@ -643,6 +653,22 @@ namespace Railml.Sim.Core
         public void ReportAccident(string message)
         {
             OnAccident?.Invoke(message);
+        }
+
+        public string GetNextTrainId(TrainDirection direction)
+        {
+            if (direction == TrainDirection.Up)
+            {
+                int id = _nextUpId;
+                _nextUpId += 2;
+                return id.ToString();
+            }
+            else
+            {
+                int id = _nextDownId;
+                _nextDownId += 2;
+                return id.ToString();
+            }
         }
 
 
