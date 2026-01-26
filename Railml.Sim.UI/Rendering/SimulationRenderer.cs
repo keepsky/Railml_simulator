@@ -186,7 +186,7 @@ namespace Railml.Sim.UI.Rendering
                  }
              }
 
-             using (var p = new SKPaint { Color = SKColors.Gray, Style = SKPaintStyle.Fill })
+             using (var p = new SKPaint { Color = SKColors.Gray.WithAlpha(178), Style = SKPaintStyle.Fill })
              {
                  foreach (var track in manager.Tracks.Values)
                  {

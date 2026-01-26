@@ -16,7 +16,9 @@ namespace Railml.Sim.Core.Events
 
         public override string GetLogInfo()
         {
-            return $"Train: {_train.Id}, Dir: {_train.MoveDirection}";
+            string trackId = _train.CurrentTrack.RailmlTrack.Id;
+            string trackName = _train.CurrentTrack.RailmlTrack.Name ?? "N/A";
+            return $"Train: {_train.Id}, Track: {trackName}({trackId}), Pos: {_train.PositionOnTrack:F2}m, Dir: {_train.MoveDirection}";
         }
 
         public override void Execute(SimulationContext context)
@@ -55,6 +57,18 @@ namespace Railml.Sim.Core.Events
                         foreach (var sigData in nextTrack.RailmlTrack.OcsElements.Signals.SignalList)
                         {
                             if ((sigData.Dir?.ToLower() ?? "unknown") != nextLogicalDir) continue;
+
+                            // [Bugfix] 다음 트랙에 진입할 때, 진입점(nextEntryPos) 근처의 입구 신호기는 무시함.
+                            // 실제 진행 방향으로 최소 2.0m 이상 떨어져 있는 '전방' 신호기만 블로킹 대상으로 간주.
+                            if (nextEntryDir == TrainDirection.Up)
+                            {
+                                if (sigData.Pos <= nextEntryPos + 2.0) continue;
+                            }
+                            else
+                            {
+                                if (sigData.Pos >= nextEntryPos - 2.0) continue;
+                            }
+
                             if (manager.Signals.TryGetValue(sigData.Id, out var simSig))
                             {
                                 if (simSig.Aspect == SignalAspect.Stop)
@@ -142,6 +156,18 @@ namespace Railml.Sim.Core.Events
                    
                    if (distToSignal <= context.Settings.SignalRecognitionDistance)
                    {
+                       // [Bugfix] 열차 머리가 신호를 막 통과했거나 통과 중인 경우 (2.0m 이내),
+                       // 해당 신호가 Red로 바뀌더라도 무시함 (자기 점유에 의한 정지 방지 및 진행 방향 반영).
+                       // Up: sig.Pos > Train.Pos + 2.0 (전방) / Down: sig.Pos < Train.Pos - 2.0 (전방)
+                       if (_train.MoveDirection == TrainDirection.Up)
+                       {
+                           if (sigMeta.Pos <= _train.PositionOnTrack + 2.0) continue;
+                       }
+                       else
+                       {
+                           if (sigMeta.Pos >= _train.PositionOnTrack - 2.0) continue;
+                       }
+
                        if (manager.Signals.TryGetValue(sigMeta.Id, out var signal))
                        {
                            if (signal.Aspect == SignalAspect.Stop)
@@ -193,10 +219,8 @@ namespace Railml.Sim.Core.Events
 
         private string GetTrainLogicalDirection(SimTrack track, TrainDirection moveDir)
         {
-            if (track?.RailmlTrack == null) return "unknown";
-            string mainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up";
-            if (moveDir == TrainDirection.Up) return mainDir;
-            return (mainDir == "up") ? "down" : "up";
+            // [Corrected] 선로의 mainDir과 상관없이 물리적 좌표 변화 방향이 RailML의 신호 방향(dir="up/down")과 일치함.
+            return (moveDir == TrainDirection.Up) ? "up" : "down";
         }
     }
 }

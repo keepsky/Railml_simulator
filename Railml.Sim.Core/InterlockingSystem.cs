@@ -28,25 +28,26 @@ namespace Railml.Sim.Core
 
         private void PerformAutoInterlockingChecks(SimulationContext context)
         {
-            // 1. Auto Switch Toggle (Example Logic)
-            // Logic from SKILL.md 3.2: "If no trains are present... schedule SwitchMoveEvent"
-            
+            // [사용자 요청 사항 (1)] 선로전환기 제어 시험 기능
+            // 트랙에 열차가 하나도 없을 때 모든 선로전환기에 대해서 반대 방향으로 전환하는 이벤트를 추가
             if (_manager.Trains.Count == 0)
             {
-                 // Check if any switch is moving
+                 // 현재 이동 중인 선로전환기가 하나라도 있으면 모든 선로전환기가 완료될 때까지 대기
                  bool anyMoving = _manager.Switches.Values.Any(s => s.State == SimSwitch.SwitchState.Moving);
                  if (!anyMoving)
                  {
                      foreach(var sw in _manager.Switches.Values)
                      {
+                         // 현재 상태의 반대 방향으로 타겟 설정 (Normal <-> Reverse)
                          var target = sw.State == SimSwitch.SwitchState.Normal ? SimSwitch.SwitchState.Reverse : SimSwitch.SwitchState.Normal;
-                         // Schedule move
+                         
+                         // 제어 명령(이벤트) 투입
                          _manager.EventQueue.Enqueue(new SwitchMoveEvent(context.CurrentTime, sw, target, false));
                      }
                  }
             }
 
-            // Reschedule check
+            // 주기적인 체크를 위해 1초 후 다시 스케줄링
             ScheduleAutoCheck(context.CurrentTime + 1.0);
         }
 
@@ -60,9 +61,8 @@ namespace Railml.Sim.Core
         {
             if (track == null) return;
 
-            // Determine Logical Direction
-            string trackMainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up";
-            string trainLogicalDir = (train.MoveDirection == TrainDirection.Up) ? trackMainDir : ((trackMainDir == "up") ? "down" : "up");
+            // [Corrected] RailML 표준에 맞춰 물리적 이동 방향에 기반하여 신호 방향을 매칭함
+            string trainLogicalDir = (train.MoveDirection == TrainDirection.Up) ? "up" : "down";
 
             var signals = track.RailmlTrack.OcsElements?.Signals?.SignalList?
                 .Where(s => (s.Dir?.ToLower() ?? "unknown") == trainLogicalDir)
@@ -77,9 +77,8 @@ namespace Railml.Sim.Core
         {
             if (track == null) return;
 
-            // Determine Train's Logical Direction on this track
-            string trackMainDir = track.RailmlTrack.MainDir?.ToLower() ?? "up";
-            string trainLogicalDir = (train.MoveDirection == TrainDirection.Up) ? trackMainDir : ((trackMainDir == "up") ? "down" : "up");
+            // [Corrected] RailML 표준에 맞춰 물리적 이동 방향에 기반하여 신호 방향을 매칭함
+            string trainLogicalDir = (train.MoveDirection == TrainDirection.Up) ? "up" : "down";
 
             var signals = track.RailmlTrack.OcsElements?.Signals?.SignalList?
                 .Where(s => (s.Dir?.ToLower() ?? "unknown") == trainLogicalDir)
