@@ -13,6 +13,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -35,7 +37,13 @@
         <Label Grid.Row="5" Grid.Column="0" Content="Movement Update Interval (s):"/>
         <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding MovementUpdateInterval}" Margin="2"/>
 
-        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+        <Label Grid.Row="6" Grid.Column="0" Content="Train Spawn (Up):"/>
+        <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding TrainSpawnUp}" VerticalAlignment="Center" Margin="2"/>
+
+        <Label Grid.Row="7" Grid.Column="0" Content="Train Spawn (Down):"/>
+        <CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding TrainSpawnDown}" VerticalAlignment="Center" Margin="2"/>
+
+        <StackPanel Grid.Row="9" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="OK" IsDefault="True" Click="OnOkClick" Width="80" Margin="5"/>
             <Button Content="Cancel" IsCancel="True" Width="80" Margin="5"/>
         </StackPanel>

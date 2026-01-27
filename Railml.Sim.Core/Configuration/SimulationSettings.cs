@@ -25,6 +25,10 @@ namespace Railml.Sim.Core
 
         // Switch Logic
         public double SwitchTransitionTime { get; set; } = 10.0; // seconds
+        
+        // Spawn Control
+        public bool TrainSpawnUp { get; set; } = true;
+        public bool TrainSpawnDown { get; set; } = true;
 
         public static SimulationSettings Load(string filePath)
         {

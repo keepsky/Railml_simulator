@@ -20,6 +20,18 @@ namespace Railml.Sim.Core.Events
             var manager = context as SimulationManager;
             if (manager == null || TargetTrack == null) return;
 
+            // Check Settings for Direction
+            bool isSpawnEnabled = true;
+            if (Direction == TrainDirection.Up) isSpawnEnabled = context.Settings.TrainSpawnUp;
+            else if (Direction == TrainDirection.Down) isSpawnEnabled = context.Settings.TrainSpawnDown;
+
+            if (!isSpawnEnabled)
+            {
+                 // If disabled, just schedule next check and exit
+                 ScheduleNextSpawn(context);
+                 return;
+            }
+
             // Check if track is occupied
             if (TargetTrack.OccupyingTrains.Count > 0)
             {
@@ -53,7 +65,12 @@ namespace Railml.Sim.Core.Events
             }
 
             // Schedule next spawn for THIS specific point regardless of whether this one succeeded
-            var rand = new Random(); // Consider sharing this in SimulationManager/Context later
+            ScheduleNextSpawn(context);
+        }
+
+        private void ScheduleNextSpawn(SimulationContext context)
+        {
+            var rand = new Random(); 
             double nextInterval = -context.Settings.MeanInterArrivalTime * Math.Log(rand.NextDouble());
             context.EventQueue.Enqueue(new TrainSpawnEvent(context.CurrentTime + nextInterval, TargetTrack, Direction));
         }

@@ -7,5 +7,7 @@
   "SignalBrakingDeceleration": 1.5,
   "MovementUpdateInterval": 1,
   "DefaultDirection": 0,
-  "SwitchTransitionTime": 10
+  "SwitchTransitionTime": 10,
+  "TrainSpawnUp": false,
+  "TrainSpawnDown": true
 }
