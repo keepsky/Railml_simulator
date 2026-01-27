@@ -4,6 +4,6 @@
         <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="Railml.Sim.Core\Railml.Sim.Core.csproj" />
+        <ProjectReference Include="..\..\Railml.Sim.Core\Railml.Sim.Core.csproj" />
     </ItemGroup>
 </Project>

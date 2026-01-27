@@ -298,7 +298,7 @@ namespace Railml.Sim.UI.Rendering
 
                     var checkDir = (currentDir == TrainDirection.Up) ? TrainDirection.Down : TrainDirection.Up;
                     
-                    if (manager.FindNextTrack(currentTrack, checkDir, out var prevTrack, out var entryPos, out var entryDir))
+                    if (manager.FindNextTrack(currentTrack, checkDir, out var prevTrack, out var entryPos, out var entryDir, out var crossedSwitch))
                     {
                         currentTrack = prevTrack;
                         currentHeadPos = entryPos;

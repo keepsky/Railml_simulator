@@ -3,7 +3,7 @@
   "TrainLength": 300,
   "DefaultSpeed": 25,
   "BrakingDeceleration": 50,
-  "SignalRecognitionDistance": 500,
+  "SignalRecognitionDistance": 100,
   "SignalBrakingDeceleration": 1.5,
   "MovementUpdateInterval": 1,
   "DefaultDirection": 0,

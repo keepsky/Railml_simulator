@@ -47,12 +47,27 @@ namespace Railml.Sim.Core.Events
                 if (hitEnd) remainder = _train.PositionOnTrack - _train.CurrentTrack.Length;
                 if (hitStart) remainder = System.Math.Abs(_train.PositionOnTrack);
 
-                if (manager.FindNextTrack(_train.CurrentTrack, _train.MoveDirection, out var nextTrack, out var nextEntryPos, out var nextEntryDir))
+                if (manager.FindNextTrack(_train.CurrentTrack, _train.MoveDirection, out var nextTrack, out var nextEntryPos, out var nextEntryDir, out var crossedSwitch))
                 {
+                    // [Safety Check] Ensure nextTrack is valid
+                    if (nextTrack == null) return;
+
+                    // [Safety Check] Derailment if crossing a moving switch
+                    if (crossedSwitch != null && crossedSwitch.State == SimSwitch.SwitchState.Moving)
+                    {
+                         string info = $"Derailment detected!\n" +
+                                       $"Switch: {crossedSwitch.RailmlSwitch.Id}\n" +
+                                       $"Train: {_train.Id} ({_train.MoveDirection})\n" +
+                                       $"Reason: Train entered switch while it was moving (Transitioning).";
+                         manager.Stop();
+                         manager.ReportAccident(info);
+                         return;
+                    }
+
                     // Check for Blocking Signal
-                    string nextLogicalDir = GetTrainLogicalDirection(nextTrack, nextEntryDir);
+                    string nextLogicalDir = GetTrainLogicalDirection(nextTrack!, nextEntryDir);
                     SimSignal blockingSignal = null;
-                    if (nextTrack.RailmlTrack.OcsElements?.Signals?.SignalList != null && manager.Signals != null)
+                    if (nextTrack!.RailmlTrack.OcsElements?.Signals?.SignalList != null && manager.Signals != null)
                     {
                         foreach (var sigData in nextTrack.RailmlTrack.OcsElements.Signals.SignalList)
                         {
@@ -96,7 +111,7 @@ namespace Railml.Sim.Core.Events
                     }
 
                     // ENTER Next Track
-                    _train.CurrentTrack = nextTrack;
+                    _train.CurrentTrack = nextTrack!;
                     _train.PositionOnTrack = nextEntryPos + (remainder * (nextEntryDir == TrainDirection.Up ? 1 : -1)); 
                     _train.MoveDirection = nextEntryDir;
                 }

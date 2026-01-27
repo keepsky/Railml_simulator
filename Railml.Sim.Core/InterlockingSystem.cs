@@ -53,8 +53,8 @@ namespace Railml.Sim.Core
 
         public void ReportTrainWaitingAtSignal(SimSignal signal)
         {
-            // User requirement: "2 seconds later, show Green aspect"
-            RequestSignalAspect(signal, SignalAspect.Proceed, 2.0);
+            // User requirement: "5 seconds later, show Green aspect"
+            RequestSignalAspect(signal, SignalAspect.Proceed, 5.0);
         }
 
         public void ReportTrainExitTrack(Train train, SimTrack track)

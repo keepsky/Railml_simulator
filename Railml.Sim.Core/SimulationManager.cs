@@ -281,7 +281,7 @@ namespace Railml.Sim.Core
                 // Find previous track
                 var checkDir = (currentDir == TrainDirection.Up) ? TrainDirection.Down : TrainDirection.Up;
                 
-                if (FindNextTrack(currentTrack, checkDir, out var prevTrack, out var entryPos, out var entryDir))
+                if (FindNextTrack(currentTrack, checkDir, out var prevTrack, out var entryPos, out var entryDir, out var crossedSwitch))
                 {
                     currentTrack = prevTrack;
                     currentPos = entryPos;
@@ -356,11 +356,12 @@ namespace Railml.Sim.Core
             train.OccupiedTracks = finalOccupiedList;
         }
 
-        public bool FindNextTrack(SimTrack currentTrack, TrainDirection currentDir, out SimTrack nextTrack, out double nextPos, out TrainDirection nextDir)
+        public bool FindNextTrack(SimTrack currentTrack, TrainDirection currentDir, out SimTrack? nextTrack, out double nextPos, out TrainDirection nextDir, out SimSwitch? crossedSwitch)
         {
             nextTrack = null;
             nextPos = 0;
             nextDir = TrainDirection.Up;
+            crossedSwitch = null;
 
             // 1. Identify Exit Node Connection
             Connection exitConn = null;
@@ -388,186 +389,58 @@ namespace Railml.Sim.Core
             // 3. Handle Target
             if (targetInfo.Parent is SimTrack targetSimTrack)
             {
-                nextTrack = targetSimTrack;
-                // Check if we entered at Begin or End
-                // If NodeId == TrackBegin ID -> We are at Begin. Proceed UP. Pos = 0.
-                string beginId = targetSimTrack.RailmlTrack.TrackTopology.TrackBegin.Id;
+                double entryPosOnTarget = (targetInfo.NodeId == targetSimTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : targetSimTrack.Length;
                 
-                // Note: The ConnectionInfo stores the node ID where the connection lives.
-                if (targetInfo.NodeId == beginId)
+                // Check if target track starts (or ends) with a switch at the entry point
+                var swAtEntry = Switches.Values.FirstOrDefault(s => s.ParentTrack == targetSimTrack && Math.Abs(s.RailmlSwitch.Pos - entryPosOnTarget) < 0.001);
+                
+                if (swAtEntry != null)
                 {
-                    nextPos = 0;
-                    nextDir = TrainDirection.Up;
+                    crossedSwitch = swAtEntry;
+                    string currentCourse = swAtEntry.CurrentCourse?.ToLower() ?? "straight";
+                    string continueCourse = swAtEntry.RailmlSwitch.TrackContinueCourse?.ToLower() ?? "straight";
+                    
+                    if (currentCourse != continueCourse)
+                    {
+                        var branchedConn = swAtEntry.RailmlSwitch.ConnectionList?.FirstOrDefault(c => (c.Course?.ToLower() ?? "") == currentCourse);
+                        if (branchedConn != null && ConnectionMap.TryGetValue(branchedConn.Ref, out var branchTarget) && branchTarget.Parent is SimTrack branchTrack)
+                        {
+                            nextTrack = branchTrack;
+                            nextPos = (branchTarget.NodeId == branchTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : branchTrack.Length;
+                            nextDir = (nextPos == 0) ? TrainDirection.Up : TrainDirection.Down;
+                            return true;
+                        }
+                    }
                 }
-                else
-                {
-                    nextPos = targetSimTrack.Length;
-                    nextDir = TrainDirection.Down;
-                }
+
+                nextTrack = targetSimTrack;
+                nextPos = (targetInfo.NodeId == targetSimTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : targetSimTrack.Length;
+                nextDir = (nextPos == 0) ? TrainDirection.Up : TrainDirection.Down;
                 return true;
             }
             else if (targetInfo.Parent is SimSwitch simSwitch)
             {
-                // 4. Handle Switch Traversal
-                // targetInfo.Connection is the Entry Port on the switch.
-                // We need to find the Exit Port based on Switch Position.
-                
-                // Simplified Switch Logic:
-                // If Entry is "Tip" (Orientation="incoming"? Depends on RailML usage).
-                // RailML 2.5: <switch ...> <connection id="..." orientation="incoming/outgoing" course="left/right/straight" />
-                // Logic:
-                // 1. Determine current switch state: simSwitch.CurrentPosition ("left", "right", "straight")
-                // 2. Find connection that matches this course.
-                // 3. BUT, we must know if we are entering from the Tip or the Legs.
-                
-                // incoming connection to switch -> Ref was to a switch connection.
-                var entryConn = targetInfo.Connection;
-                
-                // If entryConn course is "straight" (e.g. Tip), output is determined by Position.
-                // If entryConn course is "left" (Leg), output is Tip? (Merge)
-                
-                // Let's assume:
-                // If Switch is set to X. We can travel A->B if path A-B matches X.
-                
-                // Find "Other" connection.
-                Connection exitSwitchConn = null;
-
-                // Case 1: Entering from Tip (Commonly orientation="incoming" or course="straight" in some conventions, but RailML varies).
-                // Let's look at the example `sw1`.
-                // <switch id="sw1" ...>
-                //   <connection id="c1-cb6" ref="cb6" orientation="outgoing" course="left" />
-                // </switch>
-                // It has ONLY ONE connection listed?? RailML usually lists all 3.
-                // Wait, `sw1` in `sim.railml` line 66 only has ONE connection...
-                // "c1-cb6" ref "cb6" (outgoing, left).
-                // Where is the incoming?
-                // `cb5` ref `ce4`. `ce5` ref `cb3`. 
-                // Wait. `tr5` End `te5` connects to `ce5` (ref `cb3` - tr3 begin).
-                // `tr5` Connections block has `sw1`.
-                // This implies the switch is *embedded* in `tr5`?
-                // RailML 2.5: <switch> is usually a node connecting tracks.
-                // BUT in `sim.railml` line 64: `<switch ...>` is inside `<connections>` of `trackTopology` of `tr5`.
-                // And it connects to `cb6`.
-                // This means `tr5` itself is the switch track?
-                // `track` `tr5`. End connects to `cb3` (tr3).
-                // But it also has a Switch defining a branch to `cb6`.
-                // This is an "Internal Switch" or "Branching Track".
-
-                // In this specific model structure:
-                // Switch is Inside Track Topology.
-                // It seems to define the *branching* off this track.
-                // The main path is `te5` -> `ce5`.
-                // The switch path is `sw1` -> `c1-cb6` -> `cb6` (tr6 Begin).
-                
-                // Complex Logic for Embedded Switch:
-                // If train is at end of `tr5`.
-                // It checks `sw1`.
-                // If `sw1` is "left", it goes to `cb6` (`tr6`).
-                // If `sw1` is "straight", it goes to `ce5` (`tr3`).
-                
-                // We need to handle this specific structure.
-                // Identify if current track HAS a switch at the end?
-                
-                // My `FindNextTrack` logic started by looking at `TrackEnd.Connection`.
-                // `tr5` TrackEnd `te5` has `connection id="ce5"`.
-                // But the `connections` element has `switch`.
-                // Standard RailML: Track connects to Switch Node. Switch Node connects to 2 Tracks.
-                // This file: Track contains Switch *definition*.
-                
-                // Let's assume the standard case first (Track -> Connection -> Track).
-                // AND handle this file's case:
-                // If Track has `Connections/Switch`, we check that FIRST before `TrackEnd`.
-                
-                // Check for embedded switch at the exit end.
-                var sw = currentTrack.RailmlTrack.TrackTopology.Connections?.Switches?.FirstOrDefault();
-                if (sw != null)
+                crossedSwitch = simSwitch;
+                var parentTrack = simSwitch.ParentTrack;
+                if (parentTrack != null)
                 {
-                    // Check if switch applies to this end?
-                    // Usually `pos` indicates where. `pos="0"`? 
-                    // `tr5`: `pos="0"` for switch. `tr5` range 1200-1500 (len 300).
-                    // If pos=0, it's at the BEGINNING?
-                    // `tr5` mainDir="down".
-                    // If Moving Down (towards End), we are at Pos=Length (30).
-                    // Switch is at 0. So we passed it?
-                    // Wait. `tr5` start 1200. end 1500. `switch pos="0"`.
-                    // Pos is usually valid from 0..Length.
-                    
-                    // Let's look at `tr5` again.
-                    // `tb5` (0) -> `ce4`.
-                    // `te5` (30) -> `ce5`.
-                    // Switch at 0.
-                    // This suggests the branch is at the *Beginning*.
-                    // If coming from `tr4` (Up/Down?), we enter `tr5`.
-                    // We can go to `Tr5 main` OR `Tr6`?
-                    
-                    // Let's re-read `tr5` connection.
-                    // `tr4` (1000-1200). `te4` (20) connects to `cb5`.
-                    // We enter `tr5` at `tb5` (0).
-                    // AT 0, there is `sw1`.
-                    // If `sw1` is left, we go to `c1-cb6` -> `cb6` -> `tr6`.
-                    // If `sw1` is straight, we go into `tr5` body?
-                    
-                    // This means `FindNextTrack` logic:
-                    // If we are AT the entry of a track that has a switch at the entry...
-                    // But we are usually calling `FindNextTrack` when we reach the *End* of the current track.
-                    
-                    // User Problem: "Train at end... not proceeding".
-                    // Train is at End of a track.
-                    // It needs to go to Neighbor.
-                    
-                    // If the user is testing the switch case:
-                    // Train on `tr1` -> `tr2`. (Straight).
-                    // Train on `tr2` -> `ce2` (1000) -> `cb4`. `tr4` (1000).
-                    // `tr4` (Down). Start 1000. End 1200.
-                    // Train enters `tr4` at 1000 (`tb4`). `tr4` is Down, so `tb4` is...
-                    // `tr4` Topology: Begin 1000. End 1200.
-                    // `Code="plain"`.
-                    // If `MainDir="down"`.
-                    // Movement is usually against metric? Or just property?
-                    // My `TrainMoveEvent`: Up = Pos++, Down = Pos--.
-                    // If I enter at 1000 (Begin).
-                    // If I want to move to 1200. I must move UP (Pos++).
-                    // Does `MainDir="down"` restrict movement direction? Or just labeling?
-                    // Usually "down" means nominal direction is decreasing absPos?
-                    // `tr4`: Begin 1000. End 1200.
-                    // AbsPos increases.
-                    // If I am at 1000. I move to 1200. That is +200.
-                    // My logic: Update Position += Distance.
-                    // So I am moving UP.
-                    
-                    // User says: "Train stops at end".
-                    // Case 1: Track -> Track.
-                    // `tr2` (Up) -> `tr4` (Down?).
-                    // `tr2` End: 1000. `cb4` matches `tr4` Begin (1000).
-                    // Train leaves `tr2` (Pos 1000).
-                    // Enters `tr4` (Pos 0 relative? RailML `pos` usually 0..Len).
-                    // `tr4` Begin `pos=0`.
-                    // `tr4` End `pos=20`.
-                    // So `tr4` is 20m long.
-                    // `tr2` ends at 1000.
-                    // `tr4` begins at 1000.
-                    // Transition: `tr2` End -> `tr4` Begin.
-                    // New Pos = 0.
-                    // New Dir = Up (Since we move 0->20).
-                    
-                    // Logic must use `ConnectionMap`.
-                    // `tr2` End has `ce2`.
-                    // `ce2` ref `cb4`.
-                    // `cb4` is in `tr4` Begin.
-                    // Map[`cb4`] -> `(tr4, cb4, NodeId=tb4)`.
-                    // `FindNextTrack` returns `tr4`.
-                    
-                    // So, implementation plan covers this.
-                    // IMPORTANT: The `targetRef` might be THE connection ID on the other side.
-                    // `ce2` ref `cb4`.
-                    // My Map stores `cb4` -> `tr4` info.
-                    // So `ConnectionMap.TryGetValue(targetRef)` works.
-                    
+                    double swPos = simSwitch.RailmlSwitch.Pos;
+                    // Logic to find the tip (trunk) of the switch
+                    // If we are here, we are likely coming from a leg.
+                    var parentConn = (swPos < 0.001) ? parentTrack.RailmlTrack.TrackTopology.TrackBegin.ConnectionList?.FirstOrDefault() : parentTrack.RailmlTrack.TrackTopology.TrackEnd.ConnectionList?.FirstOrDefault();
+
+                    if (parentConn != null && ConnectionMap.TryGetValue(parentConn.Ref, out var tipTarget) && tipTarget.Parent is SimTrack tipTrack)
+                    {
+                        nextTrack = tipTrack;
+                        nextPos = (tipTarget.NodeId == tipTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : tipTrack.Length;
+                        nextDir = (nextPos == 0) ? TrainDirection.Up : TrainDirection.Down;
+                        return true;
+                    }
                 }
             }
-
             return false;
         }
+
 
         public void Start()
         {
