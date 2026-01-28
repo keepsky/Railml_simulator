@@ -100,12 +100,12 @@ namespace Railml.Sim.Core
 
             if (signals == null || signals.Count == 0) return;
 
-            // User Requirement: 10 seconds later, set signal to Stop (Red)
+            // User Requirement: 10 seconds (configurable) later, set signal to Stop (Red)
             foreach (var sigData in signals)
             {
                 if (_manager.Signals.TryGetValue(sigData.Id, out var simSig))
                 {
-                    RequestSignalAspect(simSig, SignalAspect.Stop, 10.0);
+                    RequestSignalAspect(simSig, SignalAspect.Stop, _manager.Settings.TrackResponseTime);
                 }
             }
         }
