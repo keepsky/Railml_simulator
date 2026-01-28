@@ -32,5 +32,10 @@ namespace Railml.Sim.Core.SimObjects
             // Map initial course to State if possible, or default to Normal
             State = SwitchState.Normal; 
         }
+        public string GetOrientation()
+        {
+            // Default to outgoing if not specified
+            return RailmlSwitch.ConnectionList?.FirstOrDefault()?.Orientation?.ToLower() ?? "outgoing";
+        }
     }
 }

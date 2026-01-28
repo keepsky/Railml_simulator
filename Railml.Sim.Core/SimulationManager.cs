@@ -400,19 +400,86 @@ namespace Railml.Sim.Core
                 if (swAtEntry != null)
                 {
                     crossedSwitch = swAtEntry;
-                    string currentCourse = swAtEntry.CurrentCourse?.ToLower() ?? "straight";
-                    string continueCourse = swAtEntry.RailmlSwitch.TrackContinueCourse?.ToLower() ?? "straight";
                     
-                    if (currentCourse != continueCourse)
+                    // Complex Routing Logic
+                    string orientation = swAtEntry.GetOrientation(); // "incoming" or "outgoing"
+                    bool isUp = (currentDir == TrainDirection.Up);
+
+                    // Determine Logical Operation: Split vs Merge
+                    // Up + Outgoing => Split
+                    // Up + Incoming => Merge
+                    // Down + Incoming => Split
+                    // Down + Outgoing => Merge
+                    bool isSplit = false;
+                    if (isUp) isSplit = (orientation == "outgoing");
+                    else isSplit = (orientation == "incoming");
+
+                    if (isSplit)
                     {
-                        var branchedConn = swAtEntry.RailmlSwitch.ConnectionList?.FirstOrDefault(c => (c.Course?.ToLower() ?? "") == currentCourse);
-                        if (branchedConn != null && ConnectionMap.TryGetValue(branchedConn.Ref, out var branchTarget) && branchTarget.Parent is SimTrack branchTrack)
+                        // SPLIT LOGIC: Select Path based on State
+                        // Normal -> ContinueCourse
+                        // Reverse -> Diverging Path
+                        string continueCourse = swAtEntry.RailmlSwitch.TrackContinueCourse?.ToLower() ?? "straight";
+                        string targetCourse = continueCourse;
+
+                        if (swAtEntry.State == SimSwitch.SwitchState.Reverse)
                         {
-                            nextTrack = branchTrack;
-                            nextPos = (branchTarget.NodeId == branchTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : branchTrack.Length;
-                            nextDir = (nextPos == 0) ? TrainDirection.Up : TrainDirection.Down;
-                            return true;
+                            var divConn = swAtEntry.RailmlSwitch.ConnectionList?.FirstOrDefault(c => (c.Course?.ToLower() ?? "") != continueCourse);
+                            if (divConn != null) targetCourse = divConn.Course?.ToLower() ?? "";
                         }
+
+                        if (targetCourse != continueCourse)
+                        {
+                            var branchedConn = swAtEntry.RailmlSwitch.ConnectionList?.FirstOrDefault(c => (c.Course?.ToLower() ?? "") == targetCourse);
+                            if (branchedConn != null && ConnectionMap.TryGetValue(branchedConn.Ref, out var branchTarget) && branchTarget.Parent is SimTrack branchTrack)
+                            {
+                                nextTrack = branchTrack;
+                                nextPos = (branchTarget.NodeId == branchTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : branchTrack.Length;
+                                nextDir = (nextPos == 0) ? TrainDirection.Up : TrainDirection.Down;
+                                return true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // MERGE LOGIC: Validate Entry
+                        // We need to know if we entered via Main (Trunk) or Branch (Connection)
+                        // targetInfo.NodeId tells us strictly about the connection node type.
+                        // But wait, "targetInfo" comes from "exitConn.Ref".
+                        // If we are merging, we are entering the switch track.
+                        // If we entered via TrackNode (Begin/End), it's Main Entry?
+                        // If we entered via Switch Connection, it's Branch Entry?
+                        
+                        // Wait, if 1.2.1: "Connected by trackBegin". Structure: Track A -> Track B(Switch).
+                        // Track A's End connects to Track B's Begin.
+                        // This means we used effective connection Ref = "TrackB_Begin".
+                        // So targetInfo.NodeId would be "trackBegin" of Track B.
+                        
+                        // If 1.2.2: "Connected by <switch><connection>".
+                        // Track C's End connects to Switch Connection.
+                        // This means we used effective connection Ref = "SwitchConnID".
+                        // So targetInfo.NodeId would be "switch".
+
+                        bool isMainEntry = (targetInfo.NodeId != "switch");
+                        
+                        // Validation Rule:
+                        // Main Entry && Reverse => Derail
+                        // Branch Entry && Normal => Derail
+                        
+                        bool derail = false;
+                        if (isMainEntry && swAtEntry.State == SimSwitch.SwitchState.Reverse) derail = true;
+                        if (!isMainEntry && swAtEntry.State == SimSwitch.SwitchState.Normal) derail = true;
+
+                        if (derail)
+                        {
+                            ReportAccident($"Derailment at Switch {swAtEntry.RailmlSwitch.Id}: Invalid Trailing Move (State: {swAtEntry.State}, Entry: {(isMainEntry ? "Main" : "Branch")})");
+                            return false; // Stop the train
+                        }
+                        
+                        // Logical Move: Proceed to Trunk (which is simply continuing on this track)
+                        // Since we are NOT splitting, we just land on 'targetSimTrack'.
+                        // However, we must ensure we don't accidentally jump to a branch if we were main?
+                        // No, 'targetSimTrack' IS the trunk track. We are just entering it.
                     }
                 }
 
@@ -427,9 +494,54 @@ namespace Railml.Sim.Core
                 var parentTrack = simSwitch.ParentTrack;
                 if (parentTrack != null)
                 {
+                    // Apply Complex Routing Logic for Direct Switch Connection Entry (Branch Entry)
+                    string orientation = simSwitch.GetOrientation();
+                    bool isUp = (currentDir == TrainDirection.Up);
+
+                    // Determine Logical Operation
+                    bool isSplit = false;
+                    if (isUp) isSplit = (orientation == "outgoing");
+                    else isSplit = (orientation == "incoming");
+
+                    if (isSplit)
+                    {
+                        // Entering a switch via a connection in Split mode? 
+                        // This implies we are BACK-TRACKING into a leg? 
+                        // Or we entered the Trunk via a "Switch Connection"? (Uncommon topology but possible).
+                        // If we are Splitting, we need to choose a path.
+                        // But we are already AT a specific connection (targetInfo.Connection).
+                        // So the path is determined by the connection we just used?
+                        // Actually, if we entered via a specific connection, we are AT that leg.
+                        // If operation is Split, we are traversing Trunk -> Legs.
+                        // If we target a Leg connection, we are arriving AT the leg. 
+                        // This sounds like we are moving Leg -> Trunk (Merge).
+                        // Let's stick to the User's Definitions.
+                        
+                        // If Orientation says Split, but we entered via Connection (Leg).
+                        // This is weird. "Outgoing" means Trunk -> Legs.
+                        // If we Target a Switch Connection, we are Arriving at the Switch from a branch.
+                        // So we are the "In" of "Outgoing"? No.
+                        // Use strict Matrix.
+                    }
+                    else
+                    {
+                         // MERGE Logic
+                         // We entered via Switch Connection => Branch Entry.
+                         bool isMainEntry = false; // Targeted a switch connection directly
+
+                         bool derail = false;
+                         // Branch Entry Checks
+                         if (!isMainEntry && simSwitch.State == SimSwitch.SwitchState.Normal) derail = true;
+
+                         if (derail)
+                         {
+                             ReportAccident($"Derailment at Switch {simSwitch.RailmlSwitch.Id}: Invalid Trailing Move (State: {simSwitch.State}, Entry: Branch)");
+                             return false;
+                         }
+                    }
+
+                    // Proceed to Tip (Trunk)
                     double swPos = simSwitch.RailmlSwitch.Pos;
-                    // Logic to find the tip (trunk) of the switch
-                    // If we are here, we are likely coming from a leg.
                     var parentConn = (swPos < 0.001) ? parentTrack.RailmlTrack.TrackTopology.TrackBegin.ConnectionList?.FirstOrDefault() : parentTrack.RailmlTrack.TrackTopology.TrackEnd.ConnectionList?.FirstOrDefault();
 
                     if (parentConn != null && ConnectionMap.TryGetValue(parentConn.Ref, out var tipTarget) && tipTarget.Parent is SimTrack tipTrack)
