@@ -541,16 +541,22 @@ namespace Railml.Sim.Core
                     }
 
                     // Proceed to Tip (Trunk)
-                    double swPos = simSwitch.RailmlSwitch.Pos;
-                    var parentConn = (swPos < 0.001) ? parentTrack.RailmlTrack.TrackTopology.TrackBegin.ConnectionList?.FirstOrDefault() : parentTrack.RailmlTrack.TrackTopology.TrackEnd.ConnectionList?.FirstOrDefault();
-
-                    if (parentConn != null && ConnectionMap.TryGetValue(parentConn.Ref, out var tipTarget) && tipTarget.Parent is SimTrack tipTrack)
-                    {
-                        nextTrack = tipTrack;
-                        nextPos = (tipTarget.NodeId == tipTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : tipTrack.Length;
-                        nextDir = (nextPos == 0) ? TrainDirection.Up : TrainDirection.Down;
-                        return true;
-                    }
+                    // We are Entering the Switch Track (ParentTrack) at the Switch Position
+                    nextTrack = parentTrack;
+                    nextPos = simSwitch.RailmlSwitch.Pos;
+                    
+                    // Determine direction on the new track
+                    // If Pos=0 (Begin), and we entered there, we move to End (Down? No, Up is Begin->End)
+                    // Wait, TrainDirection.Up means moving in direction of increasing Pos? Yes.
+                    // If we enter at 0, we move Up (0 -> Length).
+                    // If we enter at Length, we move Down (Length -> 0).
+                    
+                    // Switches are strictly at Pos=0 in this model (checked in Init).
+                    // So nextPos = 0.
+                    // We move UP (0 -> Length).
+                    nextDir = TrainDirection.Up;
+                    
+                    return true;
                 }
             }
             return false;
