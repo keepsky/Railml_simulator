@@ -11,7 +11,12 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:StatusColorConverter x:Key="StatusColorConverter"/>
         <conv:SignalColorConverter x:Key="SignalColorConverter"/>
+
     </Window.Resources>
+
+    <Window.CommandBindings>
+        <CommandBinding Command="ApplicationCommands.Copy" Executed="OnCopyLog"/>
+    </Window.CommandBindings>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -25,7 +30,7 @@
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <!-- Splitter -->
-                <RowDefinition Height="150"/>
+                <RowDefinition Height="150" x:Name="LogRow"/>
                 <!-- Log -->
                 <RowDefinition Height="Auto"/>
                 <!-- Status -->
@@ -34,8 +39,18 @@
             <ToolBar Grid.Row="0">
                 <Button Content="Load RailML" Click="OnLoadClick"/>
                 <Separator/>
-                <Button Content="Start" Click="OnStartClick"/>
-                <Button Content="Stop" Click="OnStopClick"/>
+                <ToggleButton Command="{Binding ToggleSimulationCommand}" IsChecked="{Binding IsSimulationRunning, Mode=OneWay}">
+                    <ToggleButton.Style>
+                        <Style TargetType="ToggleButton">
+                            <Setter Property="Content" Value="Start"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter Property="Content" Value="Stop"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ToggleButton.Style>
+                </ToggleButton>
                 <Separator/>
                 <ToggleButton Content="Log" IsChecked="{Binding IsLogVisible}"/>
                 <Separator/>
@@ -61,10 +76,25 @@
                     <StackPanel Orientation="Horizontal" Background="#F0F0F0">
                         <TextBlock Text="Simulation Log" FontWeight="Bold" Margin="5" VerticalAlignment="Center"/>
                         <Separator Width="10" Visibility="Hidden"/>
+                        <Separator Width="10" Visibility="Hidden"/>
+                        <ToggleButton Name="FilterToggle" Content="Filter" Padding="4,1" Margin="2"/>
+                        <Popup IsOpen="{Binding ElementName=FilterToggle, Path=IsChecked}" StaysOpen="False" PlacementTarget="{Binding ElementName=FilterToggle}" Placement="Bottom">
+                            <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="5" MaxHeight="300">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding MessageFilters}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked}" Margin="2"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
                         <Button Content="Save" Click="OnSaveLogClick" Padding="4,1" Margin="2"/>
                         <Button Content="Clear" Click="OnClearLogClick" Padding="4,1" Margin="2"/>
                     </StackPanel>
-                    <ListView Grid.Row="1" ItemsSource="{Binding LogEntries}" VirtualizingPanel.IsVirtualizing="True">
+                    <ListView x:Name="LogListView" Grid.Row="1" ItemsSource="{Binding LogView}" SelectionMode="Extended" VirtualizingPanel.IsVirtualizing="True">
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time}" Width="100"/>

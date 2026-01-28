@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
+using System.Windows.Data;
 using Railml.Sim.Core;
 using Railml.Sim.Core.Models;
 
@@ -13,8 +14,12 @@ namespace Railml.Sim.UI.ViewModels
         private DispatcherTimer _timer;
 
         public System.Collections.ObjectModel.ObservableCollection<Railml.Sim.UI.Models.LogEntry> LogEntries { get; } = new System.Collections.ObjectModel.ObservableCollection<Railml.Sim.UI.Models.LogEntry>();
+        public System.Collections.ObjectModel.ObservableCollection<FilterItem> MessageFilters { get; } = new System.Collections.ObjectModel.ObservableCollection<FilterItem>();
+        public ICollectionView LogView { get; private set; }
 
-        private bool _isLogVisible;
+
+
+        private bool _isLogVisible = true;
         public bool IsLogVisible
         {
             get => _isLogVisible;
@@ -55,6 +60,31 @@ namespace Railml.Sim.UI.ViewModels
             _timer = new DispatcherTimer();
             _timer.Interval = TimeSpan.FromMilliseconds(33); // ~30 FPS
             _timer.Tick += OnTimerTick;
+
+            // Initialize CollectionView
+            LogView = CollectionViewSource.GetDefaultView(LogEntries);
+            LogView.Filter = FilterLog;
+            LogView = CollectionViewSource.GetDefaultView(LogEntries);
+            LogView.Filter = FilterLog;
+
+            ToggleSimulationCommand = new RelayCommand(ToggleSimulation);
+        }
+
+        private bool FilterLog(object item)
+        {
+            if (item is Railml.Sim.UI.Models.LogEntry entry)
+            {
+               foreach(var filter in MessageFilters)
+               {
+                   if (filter.Name == entry.Message)
+                   {
+                       return filter.IsChecked;
+                   }
+               }
+               // If new message type appears before filter is added (async race), show it by default
+               return true;
+            }
+            return true;
         }
 
         public void LoadSimulation(Railml.Sim.Core.Models.Railml model)
@@ -74,6 +104,17 @@ namespace Railml.Sim.UI.ViewModels
                     {
                         // Prefix info with execution time in (hh:mm:ss.msec)
                         finalInfo = $"({SimUtils.FormatTime(eTime)}) {info}";
+                    }
+
+                    // Dynamic Filter Management
+                    bool found = false;
+                    foreach(var f in MessageFilters) { if (f.Name == msg) { found = true; break; } }
+                    
+                    if (!found)
+                    {
+                        var newItem = new FilterItem(msg);
+                        newItem.CheckedChanged += (s, e) => LogView.Refresh();
+                        MessageFilters.Add(newItem);
                     }
 
                     LogEntries.Add(new Railml.Sim.UI.Models.LogEntry(timeStr, type, msg, finalInfo));
@@ -130,6 +171,7 @@ namespace Railml.Sim.UI.ViewModels
             {
                 _simulationManager.Start();
                 _timer.Start();
+                OnPropertyChanged(nameof(IsSimulationRunning));
             }
         }
 
@@ -137,6 +179,7 @@ namespace Railml.Sim.UI.ViewModels
         {
             _timer.Stop();
             _simulationManager?.Stop();
+            OnPropertyChanged(nameof(IsSimulationRunning));
         }
 
         private void OnTimerTick(object sender, EventArgs e)
@@ -168,6 +211,14 @@ namespace Railml.Sim.UI.ViewModels
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+        public System.Windows.Input.ICommand ToggleSimulationCommand { get; }
+        public bool IsSimulationRunning => _simulationManager != null && _simulationManager.IsRunning;
+
+        private void ToggleSimulation()
+        {
+            if (IsSimulationRunning) Stop();
+            else Start();
         }
     }
 }

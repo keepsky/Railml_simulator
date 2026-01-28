@@ -375,7 +375,7 @@ namespace Railml.Sim.UI.Rendering
                 {
                     paint = _switchMovingPaint;
                 }
-                else if (sw.CurrentCourse == sw.RailmlSwitch.NormalPosition)
+                else if (sw.State == SimSwitch.SwitchState.Normal)
                 {
                     paint = _switchNormalPaint;
                 }

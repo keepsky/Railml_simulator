@@ -8,6 +8,7 @@ using Railml.Sim.Core.Models;
 using Railml.Sim.UI.Rendering;
 using Railml.Sim.UI.ViewModels;
 using SkiaSharp.Views.Desktop;
+using Railml.Sim.UI.Configuration;
 
 namespace Railml.Sim.UI
 {
@@ -31,7 +32,35 @@ namespace Railml.Sim.UI
                 }
             };
 
+            Loaded += OnLoaded;
+            Closed += OnClosed;
+        }
 
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            var state = UIState.Load("ui_state.json");
+            Top = state.WindowTop;
+            Left = state.WindowLeft;
+            Width = state.WindowWidth;
+            Height = state.WindowHeight;
+            _viewModel.IsLogVisible = state.IsLogVisible;
+            _viewModel.TimeScale = state.TimeScale;
+            LogRow.Height = new GridLength(state.LogHeight);
+        }
+
+        private void OnClosed(object sender, EventArgs e)
+        {
+            var state = new UIState
+            {
+                WindowTop = Top,
+                WindowLeft = Left,
+                WindowWidth = Width,
+                WindowHeight = Height,
+                IsLogVisible = _viewModel.IsLogVisible,
+                TimeScale = _viewModel.TimeScale,
+                LogHeight = LogRow.Height.Value
+            };
+            state.Save("ui_state.json");
         }
 
         private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
@@ -120,17 +149,7 @@ namespace Railml.Sim.UI
             }
         }
 
-        private void OnStartClick(object sender, RoutedEventArgs e)
-        {
-            _viewModel.Start();
-            StatusText.Text = "Simulation Running";
-        }
 
-        private void OnStopClick(object sender, RoutedEventArgs e)
-        {
-            _viewModel.Stop();
-            StatusText.Text = "Simulation Stopped";
-        }
 
         private void OnSettingsClick(object sender, RoutedEventArgs e)
         {
@@ -158,5 +177,23 @@ namespace Railml.Sim.UI
             }
         }
 
+        private void OnCopyLog(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            if (LogListView.SelectedItems.Count > 0)
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var item in LogListView.SelectedItems)
+                {
+                    if (item is Railml.Sim.UI.Models.LogEntry entry)
+                    {
+                        sb.AppendLine($"{entry.Time}\t{entry.Type}\t{entry.Message}\t{entry.Information}");
+                    }
+                }
+                if (sb.Length > 0)
+                {
+                    Clipboard.SetText(sb.ToString());
+                }
+            }
+        }
     }
 }
