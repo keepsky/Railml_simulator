@@ -6,6 +6,8 @@ namespace Railml.Sim.Core.Events
 {
     public class TrainSpawnEvent : DESEvent
     {
+        private static Random _random = new Random();
+
         public SimObjects.SimTrack TargetTrack { get; }
         public TrainDirection Direction { get; }
 
@@ -70,8 +72,7 @@ namespace Railml.Sim.Core.Events
 
         private void ScheduleNextSpawn(SimulationContext context)
         {
-            var rand = new Random(); 
-            double nextInterval = -context.Settings.MeanInterArrivalTime * Math.Log(rand.NextDouble());
+            double nextInterval = -context.Settings.MeanInterArrivalTime * Math.Log(_random.NextDouble());
             context.EventQueue.Enqueue(new TrainSpawnEvent(context.CurrentTime + nextInterval, TargetTrack, Direction));
         }
     }

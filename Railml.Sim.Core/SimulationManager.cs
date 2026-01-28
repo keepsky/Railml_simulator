@@ -635,7 +635,8 @@ namespace Railml.Sim.Core
                 if (topo.TrackBegin?.OpenEnd != null)
                 {
                     // Starts spawning at Begin (Up direction)
-                    double nextInterval = -Settings.MeanInterArrivalTime * Math.Log(_spawnRandom.NextDouble());
+                    // Warm start: Spawn sooner than full interval
+                    double nextInterval = _spawnRandom.NextDouble() * Math.Min(Settings.MeanInterArrivalTime, 10.0);
                     System.Console.WriteLine($"[DEBUG] Scheduling initial UP train at {CurrentTime + nextInterval} (Interval: {nextInterval})");
                     EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + nextInterval, track, TrainDirection.Up));
                 }
@@ -643,7 +644,8 @@ namespace Railml.Sim.Core
                 if (topo.TrackEnd?.OpenEnd != null)
                 {
                     // Starts spawning at End (Down direction)
-                    double nextInterval = -Settings.MeanInterArrivalTime * Math.Log(_spawnRandom.NextDouble());
+                    // Warm start: Spawn sooner than full interval
+                    double nextInterval = _spawnRandom.NextDouble() * Math.Min(Settings.MeanInterArrivalTime, 10.0);
                     System.Console.WriteLine($"[DEBUG] Scheduling initial DOWN train at {CurrentTime + nextInterval} (Interval: {nextInterval})");
                     EventQueue.Enqueue(new TrainSpawnEvent(CurrentTime + nextInterval, track, TrainDirection.Down));
                 }
