@@ -4,74 +4,106 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:skia="clr-namespace:SkiaSharp.Views.WPF;assembly=SkiaSharp.Views.WPF"
-    xmlns:local="clr-namespace:Railml.Sim.UI" mc:Ignorable="d" Title="RailML DES Simulator" Height="800" Width="1200">
+    xmlns:local="clr-namespace:Railml.Sim.UI"
+    xmlns:views="clr-namespace:Railml.Sim.UI.Views"
+    xmlns:conv="clr-namespace:Railml.Sim.UI.Converters" mc:Ignorable="d" Title="RailML DES Simulator" Height="800" Width="1200">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:StatusColorConverter x:Key="StatusColorConverter"/>
+        <conv:SignalColorConverter x:Key="SignalColorConverter"/>
     </Window.Resources>
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="300"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <!-- Splitter -->
+                <RowDefinition Height="150"/>
+                <!-- Log -->
+                <RowDefinition Height="Auto"/>
+                <!-- Status -->
+            </Grid.RowDefinitions>
+
+            <ToolBar Grid.Row="0">
+                <Button Content="Load RailML" Click="OnLoadClick"/>
+                <Separator/>
+                <Button Content="Start" Click="OnStartClick"/>
+                <Button Content="Stop" Click="OnStopClick"/>
+                <Separator/>
+                <ToggleButton Content="Log" IsChecked="{Binding IsLogVisible}"/>
+                <Separator/>
+                <Button Content="Settings" Click="OnSettingsClick"/>
+                <Separator/>
+                <TextBlock Text="Speed:" VerticalAlignment="Center" Margin="5,0"/>
+                <Slider Width="100" Minimum="0.5" Maximum="50.0" Value="{Binding TimeScale}" TickFrequency="0.5" IsSnapToTickEnabled="False" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding TimeScale, StringFormat='{}{0:F1}x'}" VerticalAlignment="Center" Width="30" Margin="5,0"/>
+            </ToolBar>
+
+            <skia:SKElement Name="SkiaCanvas" Grid.Row="1" PaintSurface="OnPaintSurface" MouseWheel="OnMouseWheel" MouseDown="OnMouseDown" MouseMove="OnMouseMove" MouseUp="OnMouseUp"/>
+
             <!-- Splitter -->
-            <RowDefinition Height="150"/>
-            <!-- Log -->
-            <RowDefinition Height="Auto"/>
-            <!-- Status -->
-        </Grid.RowDefinitions>
+            <GridSplitter Grid.Row="2" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center" Visibility="{Binding IsLogVisible, Converter={StaticResource BoolToVis}}"/>
 
-        <ToolBar Grid.Row="0">
-            <Button Content="Load RailML" Click="OnLoadClick"/>
-            <Separator/>
-            <Button Content="Start" Click="OnStartClick"/>
-            <Button Content="Stop" Click="OnStopClick"/>
-            <Separator/>
-            <ToggleButton Content="Log" IsChecked="{Binding IsLogVisible}"/>
-            <Separator/>
-            <Button Content="Settings" Click="OnSettingsClick"/>
-            <Separator/>
-            <TextBlock Text="Speed:" VerticalAlignment="Center" Margin="5,0"/>
-            <Slider Width="100" Minimum="0.5" Maximum="50.0" Value="{Binding TimeScale}" TickFrequency="0.5" IsSnapToTickEnabled="False" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding TimeScale, StringFormat='{}{0:F1}x'}" VerticalAlignment="Center" Width="30" Margin="5,0"/>
-        </ToolBar>
+            <!-- Log Window -->
+            <Border Grid.Row="3" Visibility="{Binding IsLogVisible, Converter={StaticResource BoolToVis}}" BorderBrush="Gray" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal" Background="#F0F0F0">
+                        <TextBlock Text="Simulation Log" FontWeight="Bold" Margin="5" VerticalAlignment="Center"/>
+                        <Separator Width="10" Visibility="Hidden"/>
+                        <Button Content="Save" Click="OnSaveLogClick" Padding="4,1" Margin="2"/>
+                        <Button Content="Clear" Click="OnClearLogClick" Padding="4,1" Margin="2"/>
+                    </StackPanel>
+                    <ListView Grid.Row="1" ItemsSource="{Binding LogEntries}" VirtualizingPanel.IsVirtualizing="True">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time}" Width="100"/>
+                                <GridViewColumn Header="Type" DisplayMemberBinding="{Binding Type}" Width="80"/>
+                                <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="250"/>
+                                <GridViewColumn Header="Information" DisplayMemberBinding="{Binding Information}" Width="400"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </Border>
 
-        <skia:SKElement Name="SkiaCanvas" Grid.Row="1" PaintSurface="OnPaintSurface" MouseWheel="OnMouseWheel" MouseDown="OnMouseDown" MouseMove="OnMouseMove" MouseUp="OnMouseUp"/>
+            <StatusBar Grid.Row="4">
+                <TextBlock Name="StatusText" Text="Ready"/>
+                <Separator/>
+                <TextBlock Text="{Binding CurrentTime, StringFormat='Time: {0:F2} s'}"/>
+                <Separator/>
+                <TextBlock Text="{Binding PendingEventCount, StringFormat='Events: {0}'}"/>
+            </StatusBar>
+        </Grid>
 
-        <!-- Splitter -->
-        <GridSplitter Grid.Row="2" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center" Visibility="{Binding IsLogVisible, Converter={StaticResource BoolToVis}}"/>
+        <!-- Right Splitter -->
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
 
-        <!-- Log Window -->
-        <Border Grid.Row="3" Visibility="{Binding IsLogVisible, Converter={StaticResource BoolToVis}}" BorderBrush="Gray" BorderThickness="0,1,0,0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal" Background="#F0F0F0">
-                    <TextBlock Text="Simulation Log" FontWeight="Bold" Margin="5" VerticalAlignment="Center"/>
-                    <Separator Width="10" Visibility="Hidden"/>
-                    <Button Content="Save" Click="OnSaveLogClick" Padding="4,1" Margin="2"/>
-                    <Button Content="Clear" Click="OnClearLogClick" Padding="4,1" Margin="2"/>
-                </StackPanel>
-                <ListView Grid.Row="1" ItemsSource="{Binding LogEntries}" VirtualizingPanel.IsVirtualizing="True">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time}" Width="100"/>
-                            <GridViewColumn Header="Type" DisplayMemberBinding="{Binding Type}" Width="80"/>
-                            <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="250"/>
-                            <GridViewColumn Header="Information" DisplayMemberBinding="{Binding Information}" Width="400"/>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-            </Grid>
-        </Border>
+        <!-- Right Panel: Explorer & Properties -->
+        <Grid Grid.Column="2" Background="White">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <StatusBar Grid.Row="4">
-            <TextBlock Name="StatusText" Text="Ready"/>
-            <Separator/>
-            <TextBlock Text="{Binding CurrentTime, StringFormat='Time: {0:F2} s'}"/>
-            <Separator/>
-            <TextBlock Text="{Binding PendingEventCount, StringFormat='Events: {0}'}"/>
-        </StatusBar>
+            <!-- Explorer -->
+            <views:ExplorerView DataContext="{Binding Explorer}" Grid.Row="0"/>
+
+            <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+
+            <!-- Properties -->
+            <views:PropertiesView DataContext="{Binding Explorer}" Grid.Row="2"/>
+        </Grid>
     </Grid>
 </Window>

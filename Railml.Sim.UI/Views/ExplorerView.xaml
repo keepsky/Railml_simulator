@@ -1,0 +1,34 @@
+<UserControl x:Class="Railml.Sim.UI.Views.ExplorerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:vm="clr-namespace:Railml.Sim.UI.ViewModels" mc:Ignorable="d" d:DesignHeight="450" d:DesignWidth="300">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Explorer" FontWeight="Bold" Margin="5" Background="#F0F0F0" Padding="5"/>
+
+        <TreeView Grid.Row="1" ItemsSource="{Binding Roots}" SelectedItemChanged="TreeView_SelectedItemChanged">
+            <TreeView.Resources>
+                <!-- Category Template -->
+                <HierarchicalDataTemplate DataType="{x:Type vm:ExplorerCategory}" ItemsSource="{Binding Items}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Items.Count, StringFormat=' ({0})'}" Foreground="Gray"/>
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+
+                <!-- Element Template -->
+                <DataTemplate DataType="{x:Type vm:SimElementViewModel}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding DisplayName}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </TreeView.Resources>
+        </TreeView>
+    </Grid>
+</UserControl>

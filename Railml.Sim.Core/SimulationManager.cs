@@ -47,6 +47,9 @@ namespace Railml.Sim.Core
 
         private void InitializeWorld()
         {
+            // Initialize Subsystems
+            Interlocking = new InterlockingSystem(this);
+
             // Build SimObjects
             foreach (var track in _infrastructure.Tracks.TrackList)
             {
@@ -445,6 +448,7 @@ namespace Railml.Sim.Core
         public void Start()
         {
             IsRunning = true;
+            if (Interlocking != null) Interlocking.Start();
             
             // Search all tracks for OpenEnd boundaries to start spawning
             foreach (var kvp in Tracks)

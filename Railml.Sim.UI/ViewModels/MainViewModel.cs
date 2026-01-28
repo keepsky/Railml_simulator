@@ -28,6 +28,7 @@ namespace Railml.Sim.UI.ViewModels
             }
         }
 
+        public ExplorerViewModel Explorer { get; private set; }
         public SimulationManager SimulationManager => _simulationManager;
         public double CurrentTime => _simulationManager?.CurrentTime ?? 0.0;
         public SimulationSettings CurrentSettings { get; set; }
@@ -90,6 +91,9 @@ namespace Railml.Sim.UI.ViewModels
                     System.Windows.MessageBox.Show(System.Windows.Application.Current.MainWindow, info, "Simulation Accident", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 });
             };
+            
+            Explorer = new ExplorerViewModel(_simulationManager);
+            OnPropertyChanged(nameof(Explorer));
 
             OnPropertyChanged(nameof(SimulationManager));
         }
@@ -151,14 +155,17 @@ namespace Railml.Sim.UI.ViewModels
                 PendingEventCount = _simulationManager.EventQueue.Count;
                 OnPropertyChanged(nameof(PendingEventCount));
 
+                // Update Explorer UI
+                Explorer?.Update();
+
                 // Trigger Redraw (View will handle this via InvalidateVisual or Binding)
             }
         }
 
         public int PendingEventCount { get; private set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }

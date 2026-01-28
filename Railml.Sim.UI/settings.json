@@ -1,13 +1,13 @@
 {
-  "MeanInterArrivalTime": 150,
+  "MeanInterArrivalTime": 300,
   "TrainLength": 300,
   "DefaultSpeed": 25,
   "BrakingDeceleration": 50,
-  "SignalRecognitionDistance": 100,
+  "SignalRecognitionDistance": 50,
   "SignalBrakingDeceleration": 1.5,
   "MovementUpdateInterval": 1,
   "DefaultDirection": 0,
   "SwitchTransitionTime": 10,
-  "TrainSpawnUp": false,
-  "TrainSpawnDown": true
+  "TrainSpawnUp": true,
+  "TrainSpawnDown": false
 }

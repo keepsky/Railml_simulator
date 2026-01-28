@@ -1,0 +1,93 @@
+<UserControl x:Class="Railml.Sim.UI.Views.PropertiesView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:vm="clr-namespace:Railml.Sim.UI.ViewModels"
+    xmlns:conv="clr-namespace:Railml.Sim.UI.Converters" mc:Ignorable="d" d:DesignHeight="450" d:DesignWidth="300">
+    <UserControl.Resources>
+        <conv:StatusColorConverter x:Key="StatusColorConverter"/>
+        <conv:SignalColorConverter x:Key="SignalColorConverter"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Properties" FontWeight="Bold" Margin="5" Background="#F0F0F0" Padding="5"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ContentControl Content="{Binding SelectedElement}">
+                <ContentControl.Resources>
+
+                    <!-- SimTrack Template -->
+                    <DataTemplate DataType="{x:Type vm:SimTrackViewModel}">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="Type: Track" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <TextBlock Text="ID: " Width="60" Foreground="Gray"/>
+                                <TextBlock Text="{Binding Id}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <TextBlock Text="Name: " Width="60" Foreground="Gray"/>
+                                <TextBlock Text="{Binding DisplayName}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <TextBlock Text="Length: " Width="60" Foreground="Gray"/>
+                                <TextBlock Text="{Binding Length, StringFormat=F2}"/>
+                            </StackPanel>
+                            <Separator Margin="0,5"/>
+                            <TextBlock Text="Status" FontWeight="Bold" Margin="0,0,0,2"/>
+                            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="2" Padding="5" Background="{Binding Status, Converter={StaticResource StatusColorConverter}}">
+                                <TextBlock Text="{Binding Status}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- SimSignal Template -->
+                    <DataTemplate DataType="{x:Type vm:SimSignalViewModel}">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="Type: Signal" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <TextBlock Text="ID: " Width="60" Foreground="Gray"/>
+                                <TextBlock Text="{Binding Id}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <TextBlock Text="System: " Width="60" Foreground="Gray"/>
+                                <TextBlock Text="{Binding Type}"/>
+                            </StackPanel>
+                            <Separator Margin="0,5"/>
+                            <TextBlock Text="Current Aspect" FontWeight="Bold" Margin="0,0,0,2"/>
+                            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="2" Padding="5">
+                                <TextBlock Text="{Binding Status}" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{Binding Status, Converter={StaticResource SignalColorConverter}}"/>
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- SimSwitch Template -->
+                    <DataTemplate DataType="{x:Type vm:SimSwitchViewModel}">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="Type: Switch" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <TextBlock Text="ID: " Width="60" Foreground="Gray"/>
+                                <TextBlock Text="{Binding Id}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <Separator Margin="0,5"/>
+                            <TextBlock Text="Switch State" FontWeight="Bold" Margin="0,0,0,2"/>
+                            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="2" Padding="5">
+                                <TextBlock Text="{Binding Status}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+
+                    <!-- Default/Null -->
+                    <DataTemplate DataType="{x:Type vm:ExplorerViewModel}">
+                        <TextBlock Text="Select an item to view properties." FontStyle="Italic" Foreground="Gray" Margin="10"/>
+                    </DataTemplate>
+
+                </ContentControl.Resources>
+            </ContentControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

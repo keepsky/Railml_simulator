@@ -61,9 +61,9 @@
             <connection id="ce5" ref="cb15" />
           </trackEnd>
           <connections>
-            <switch id="sw1" pos="0" trackContinueCourse="left" normalPosition="left">
+            <switch id="sw1" pos="0" trackContinueCourse="straight" normalPosition="straight">
               <additionalName name="21" />
-              <connection id="c1-cb6" ref="cb6" orientation="outgoing" course="straight" />
+              <connection id="c1-cb6" ref="cb6" orientation="outgoing" course="left" />
             </switch>
           </connections>
         </trackTopology>
@@ -109,7 +109,7 @@
           <connections>
             <switch id="sw2" pos="0" trackContinueCourse="straight" normalPosition="straight">
               <additionalName name="51" />
-              <connection id="c2-ce10" ref="ce10" orientation="incoming" course="straight" />
+              <connection id="c2-ce10" ref="ce10" orientation="incoming" course="left" />
             </switch>
           </connections>
         </trackTopology>
