@@ -17,6 +17,11 @@ namespace Railml.Sim.Core.Events
             _isCompletionEvent = isCompletion;
         }
 
+        public override string GetLogInfo()
+        {
+            return $"Switch {_switch.RailmlSwitch.Id} -> {_targetState}";
+        }
+
         public override void Execute(SimulationContext context)
         {
             var manager = context as SimulationManager;

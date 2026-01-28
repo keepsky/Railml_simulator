@@ -1,5 +1,5 @@
 {
-  "MeanInterArrivalTime": 80,
+  "MeanInterArrivalTime": 150,
   "TrainLength": 300,
   "DefaultSpeed": 25,
   "BrakingDeceleration": 50,
@@ -7,7 +7,7 @@
   "SignalBrakingDeceleration": 1.5,
   "MovementUpdateInterval": 1,
   "DefaultDirection": 0,
-  "SwitchTransitionTime": 10,
+  "SwitchTransitionTime": 300,
   "TrackResponseTime": 10,
   "TrainSpawnUp": true,
   "TrainSpawnDown": true

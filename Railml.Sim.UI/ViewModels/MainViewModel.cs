@@ -113,6 +113,7 @@ namespace Railml.Sim.UI.ViewModels
                     if (!found)
                     {
                         var newItem = new FilterItem(msg);
+                        if (msg == "LambdaEvent") newItem.IsChecked = false;
                         newItem.CheckedChanged += (s, e) => LogView.Refresh();
                         MessageFilters.Add(newItem);
                     }

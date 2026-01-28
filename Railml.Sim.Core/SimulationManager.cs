@@ -369,16 +369,68 @@ namespace Railml.Sim.Core
             // 1. Identify Exit Node Connection
             Connection exitConn = null;
             var topology = currentTrack.RailmlTrack.TrackTopology;
-            
-            if (currentDir == TrainDirection.Up)
+
+            // Check for Switch at Exit (Trailing Switch from Current Track)
+            double exitPos = (currentDir == TrainDirection.Up) ? currentTrack.Length : 0;
+            var swAtExit = Switches.Values.FirstOrDefault(s => s.ParentTrack == currentTrack && Math.Abs(s.RailmlSwitch.Pos - exitPos) < 0.001);
+
+            if (swAtExit != null)
             {
-                // Exiting at End
-                exitConn = topology.TrackEnd?.ConnectionList?.FirstOrDefault();
+                crossedSwitch = swAtExit;
+                
+                // Exit Switch Routing Logic
+                string orientation = swAtExit.GetOrientation(); 
+                bool isUp = (currentDir == TrainDirection.Up);
+
+                // Logic Matrix
+                bool isSplit = false;
+                if (isUp) isSplit = (orientation == "outgoing");
+                else isSplit = (orientation == "incoming");
+
+                if (isSplit)
+                {
+                    // If Split, we check State to see if we Diverge
+                    string continueCourse = swAtExit.RailmlSwitch.TrackContinueCourse?.ToLower() ?? "straight";
+                    string targetCourse = continueCourse;
+
+                    if (swAtExit.State == SimSwitch.SwitchState.Reverse)
+                    {
+                        var divConn = swAtExit.RailmlSwitch.ConnectionList?.FirstOrDefault(c => (c.Course?.ToLower() ?? "") != continueCourse);
+                        if (divConn != null) targetCourse = divConn.Course?.ToLower() ?? "";
+                    }
+
+                    if (targetCourse != continueCourse)
+                    {
+                        // We are taking the branch connection defined in the Switch
+                        var branchedConn = swAtExit.RailmlSwitch.ConnectionList?.FirstOrDefault(c => (c.Course?.ToLower() ?? "") == targetCourse);
+                        if (branchedConn != null)
+                        {
+                            exitConn = branchedConn;
+                        }
+                    }
+                    // If Normal, targetCourse == continueCourse. exitConn remains null here.
+                    // Fallback to standard Topology connection below will handle Main Path.
+                }
+                else
+                {
+                    // Merge Logic at Exit (?) - Rare/Invalid?
+                    // For now, if Merge, we assume we just follow the track end.
+                    // (User Rule 2.2 might apply here if logic inverts, but mostly Merge checks are on Entry).
+                }
             }
-            else
+            
+            if (exitConn == null)
             {
-                // Exiting at Begin
-                exitConn = topology.TrackBegin?.ConnectionList?.FirstOrDefault();
+                if (currentDir == TrainDirection.Up)
+                {
+                    // Exiting at End
+                    exitConn = topology.TrackEnd?.ConnectionList?.FirstOrDefault();
+                }
+                else
+                {
+                    // Exiting at Begin
+                    exitConn = topology.TrackBegin?.ConnectionList?.FirstOrDefault();
+                }
             }
 
             if (exitConn == null) return false;
@@ -540,23 +592,29 @@ namespace Railml.Sim.Core
                          }
                     }
 
-                    // Proceed to Tip (Trunk)
-                    // We are Entering the Switch Track (ParentTrack) at the Switch Position
-                    nextTrack = parentTrack;
-                    nextPos = simSwitch.RailmlSwitch.Pos;
-                    
-                    // Determine direction on the new track
-                    // If Pos=0 (Begin), and we entered there, we move to End (Down? No, Up is Begin->End)
-                    // Wait, TrainDirection.Up means moving in direction of increasing Pos? Yes.
-                    // If we enter at 0, we move Up (0 -> Length).
-                    // If we enter at Length, we move Down (Length -> 0).
-                    
-                    // Switches are strictly at Pos=0 in this model (checked in Init).
-                    // So nextPos = 0.
-                    // We move UP (0 -> Length).
-                    nextDir = TrainDirection.Up;
-                    
-                    return true;
+                    // Resolve Tip Track (Trunk) - restoring Pass-Through logic
+                    // We need to find the connection at the Trunk end of the switch
+                    double swPos = simSwitch.RailmlSwitch.Pos;
+                    var parentConn = (swPos < 0.001) 
+                        ? parentTrack.RailmlTrack.TrackTopology.TrackBegin?.ConnectionList?.FirstOrDefault()
+                        : parentTrack.RailmlTrack.TrackTopology.TrackEnd?.ConnectionList?.FirstOrDefault();
+
+                    if (parentConn != null && ConnectionMap.TryGetValue(parentConn.Ref, out var tipInfo) && tipInfo.Parent is SimTrack tipTrack)
+                    {
+                        nextTrack = tipTrack;
+                        double entryPosOnTip = (tipInfo.NodeId == tipTrack.RailmlTrack.TrackTopology.TrackBegin.Id) ? 0 : tipTrack.Length;
+                        nextPos = entryPosOnTip;
+                        nextDir = (nextPos == 0) ? TrainDirection.Up : TrainDirection.Down;
+                        return true;
+                    }
+                    else
+                    {
+                         // Fallback: Just stay on ParentTrack
+                         nextTrack = parentTrack;
+                         nextPos = simSwitch.RailmlSwitch.Pos;
+                         nextDir = TrainDirection.Up; 
+                         return true;
+                    }
                 }
             }
             return false;

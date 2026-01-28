@@ -47,6 +47,9 @@
         <Label Grid.Row="8" Grid.Column="0" Content="Track Response Time (s):"/>
         <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding TrackResponseTime}" Margin="2"/>
 
+        <Label Grid.Row="9" Grid.Column="0" Content="Switch Transition Time (s):"/>
+        <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding SwitchTransitionTime}" Margin="2"/>
+
         <StackPanel Grid.Row="10" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="OK" IsDefault="True" Click="OnOkClick" Width="80" Margin="5"/>
             <Button Content="Cancel" IsCancel="True" Width="80" Margin="5"/>

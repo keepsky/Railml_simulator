@@ -24,7 +24,7 @@ namespace Railml.Sim.Core
         public TrainDirection DefaultDirection { get; set; } = TrainDirection.Up;
 
         // Switch Logic
-        public double SwitchTransitionTime { get; set; } = 10.0; // seconds
+        public double SwitchTransitionTime { get; set; } = 100.0; // seconds
         
         // Track Logic
         public double TrackResponseTime { get; set; } = 10.0; // seconds for signal clear delay
