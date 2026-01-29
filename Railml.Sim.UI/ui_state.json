@@ -1,9 +1,9 @@
 {
-  "WindowTop": 199,
-  "WindowLeft": 289,
+  "WindowTop": 160,
+  "WindowLeft": 299,
   "WindowWidth": 1502,
   "WindowHeight": 800,
   "IsLogVisible": true,
   "LogHeight": 454.9999999999918,
-  "TimeScale": 8.230337078651687
+  "TimeScale": 50
 }

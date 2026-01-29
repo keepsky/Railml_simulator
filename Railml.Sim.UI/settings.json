@@ -10,5 +10,5 @@
   "SwitchTransitionTime": 150,
   "TrackResponseTime": 10,
   "TrainSpawnUp": true,
-  "TrainSpawnDown": false
+  "TrainSpawnDown": true
 }

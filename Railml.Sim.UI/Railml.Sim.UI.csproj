@@ -9,6 +9,10 @@
     <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Resources\simulator.png" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
